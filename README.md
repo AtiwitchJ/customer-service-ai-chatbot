@@ -1,3 +1,193 @@
+# LATTA-CSBOT
+
+ระบบ AI Customer Service Chatbot แบบโมดูลาร์ รองรับทั้งฝั่งผู้ใช้งาน (User Chat), ฝั่งผู้ดูแล (Admin Dashboard + RAG Upload), และแพลตฟอร์มข้อมูล/AI ครบชุดใน Docker Compose เดียว
+
+เอกสารนี้เรียบเรียงใหม่โดยอิงจาก:
+- `sa.md` (System Analysis)
+- `sd.md` (System Design)
+- `ARCHITECTURE.md` (Complete System Architecture)
+
+## ภาพรวมระบบ
+
+โปรเจกต์ประกอบด้วย 4 ส่วนหลัก:
+
+| โมดูล | โฟลเดอร์ | หน้าที่ |
+|---|---|---|
+| User Services | `latta-csbot-user-v1` | หน้าแชทผู้ใช้, backend แชท, AI agent |
+| Admin Services | `latta-csbot-admin` | หน้า admin, backend dashboard, RAG upload |
+| Data Platform | `latta-csbot-database` | Supabase stack, PostgreSQL, MongoDB, Redis |
+| LLM Runtime | `ollama` (service ใน compose) | รัน model สำหรับ chat/embedding/vision |
+
+## หลักการเชื่อมต่อสำคัญ
+
+- Frontend คุยกับ Backend ของตัวเองโดยตรงผ่าน nginx
+- Backend คุยกับ Supabase/PostgreSQL ผ่าน Kong (`http://kong:8000`)
+- AI Agent ประมวลผลงานแบบ async ผ่าน BullMQ (Redis)
+- AI Agent ส่งคำตอบกลับ User Backend ผ่าน `POST /webhook/receive_reply`
+- User Backend push คำตอบกลับหน้าเว็บผ่าน WebSocket
+
+## Architecture (ย่อ)
+
+```mermaid
+flowchart LR
+    UF[User Frontend :80] --> UB[User Backend :3001]
+    UB -->|BullMQ| AI[AI Agent :8765]
+    AI -->|POST /webhook/receive_reply| UB
+    UB -->|WebSocket| UF
+
+    AF[Admin Frontend :81] --> AB[Admin Backend :3002]
+    AB --> RAG[RAG Upload :8001]
+
+    UB --> M[(MongoDB :27017)]
+    UB --> R[(Redis :6379)]
+    AI --> K[Kong :8000]
+    AB --> K
+    RAG --> K
+    K --> PG[(PostgreSQL + pgvector :5432)]
+
+    AI --> O[Ollama :11434]
+    RAG --> O
+```
+
+## Technology Stack
+
+| Layer | Technology |
+|---|---|
+| User Frontend | HTML, Bootstrap, Vanilla JS, nginx |
+| Admin Frontend | Angular |
+| Backend Services | Node.js + Express |
+| AI/RAG Pipeline | Python + FastAPI |
+| Queue/Cache | Redis + BullMQ |
+| Database | PostgreSQL (pgvector), MongoDB |
+| API Gateway | Kong |
+| LLM Runtime | Ollama |
+
+## Ports และ Service URLs
+
+ค่า default จาก root `.env.example` และ compose:
+
+| Service | URL/Port |
+|---|---|
+| User Frontend | `http://localhost:80` |
+| User Backend | `http://localhost:3001` |
+| AI Agent | `http://localhost:8765` |
+| Admin Frontend | `http://localhost:81` |
+| Admin Backend | `http://localhost:3002` |
+| RAG Upload API | `http://localhost:8001` |
+| Supabase/Kong API | `http://localhost:8000` |
+| Supabase Studio | `http://localhost:3000` |
+| PostgreSQL | `localhost:5432` |
+| MongoDB | `localhost:27017` |
+| Redis | `localhost:6379` |
+| Redis Insight | `http://localhost:8002` |
+| Ollama | `http://localhost:11434` |
+
+## Quick Start (แนะนำ)
+
+1) สร้างไฟล์ environment:
+
+```bash
+cp .env.example .env
+```
+
+2) แก้ค่าที่จำเป็นใน `.env`:
+- `POSTGRES_PASSWORD`
+- `JWT_SECRET`
+- `ANON_KEY`
+- `SERVICE_ROLE_KEY`
+- `REDIS_PASSWORD`
+- `MONGO_ROOT_PASSWORD`
+
+3) รันระบบ:
+
+```bash
+docker compose up -d
+```
+
+4) ตรวจสอบสถานะ:
+
+```bash
+docker compose ps
+```
+
+## Chat Flow (สำคัญ)
+
+1. ผู้ใช้ส่งข้อความไป `POST /webhook/send`
+2. User Backend บันทึกข้อความ + ส่งงานเข้า BullMQ
+3. AI Agent worker ประมวลผล (RAG + LLM)
+4. AI Agent ส่งคำตอบกลับ `POST /webhook/receive_reply`
+5. User Backend ส่งคำตอบให้หน้าเว็บผ่าน WebSocket
+
+## โครงสร้างโฟลเดอร์
+
+```text
+.
+├── docker-compose.yml
+├── docker-compose.dev.yml
+├── .env.example
+├── README.md
+├── sa.md
+├── sd.md
+├── ARCHITECTURE.md
+├── latta-csbot-user-v1/
+├── latta-csbot-admin/
+└── latta-csbot-database/
+```
+
+## คำสั่งที่ใช้บ่อย
+
+```bash
+# start/stop
+docker compose up -d
+docker compose down
+
+# rebuild เฉพาะบริการ
+docker compose build --no-cache user-backend
+docker compose up -d user-backend
+
+# logs
+docker compose logs -f user-backend
+docker compose logs -f ai-agent
+docker compose logs -f admin-backend
+```
+
+## Troubleshooting
+
+### 1) `host not found in upstream "backend"`
+
+สาเหตุ: upstream ใน nginx ไม่ตรง service name จริง  
+แนวทาง: ใช้ `user-backend:3001` ในฝั่ง user frontend config (ไม่ใช่ `backend:3000`)
+
+### 2) Subflow ไม่ตอบกลับหน้าแชท
+
+เช็คค่า `.env`:
+- `API_BASE=http://user-backend:3001`
+- `REPLY_WEBHOOK_URL=http://user-backend:3001/webhook/receive_reply`
+
+และดู log ของ `ai-agent` + `user-backend` พร้อมกัน
+
+### 3) พอร์ตชนกัน
+
+แก้ค่าใน `.env` แล้วรันใหม่:
+
+```bash
+docker compose down
+docker compose up -d
+```
+
+## เอกสารอ้างอิง
+
+- [System Analysis](sa.md)
+- [System Design](sd.md)
+- [Architecture](ARCHITECTURE.md)
+- [Admin README](latta-csbot-admin/README.md)
+- [User Architecture](latta-csbot-user-v1/ARCHITECTURE.md)
+- [Database Design](latta-csbot-database/DESIGN.md)
+
+## หมายเหตุ
+
+- README นี้เน้น onboarding และการใช้งานจริงที่ระดับ root project
+- รายละเอียดเชิงลึก (sequence diagrams, data models, requirement matrix) ให้อ้างอิงที่ `sa.md`, `sd.md`, `ARCHITECTURE.md`
 # LATTA-CSBOT - Modular Architecture
 
 ระบบ Chatbot สำหรับงานบริการลูกค้า แบ่งออกเป็น 4 ส่วนหลัก
@@ -329,5 +519,6 @@ docker compose down -v --remove-orphans
 ## License
 
 MIT License
-#   c u s t o m e r - s e r v i c e - a i - c h a t b o t  
+#   c u s t o m e r - s e r v i c e - a i - c h a t b o t 
+ 
  
