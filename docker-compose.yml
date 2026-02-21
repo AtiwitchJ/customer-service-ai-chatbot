@@ -1,0 +1,722 @@
+# ===========================================
+# LATTA CS-BOT UNIFIED SERVICES
+# Main unified stack configuration
+# ===========================================
+#
+# Usage:
+#   Start:   docker compose up -d
+#   Stop:    docker compose down
+#   Destroy: docker compose down -v --remove-orphans
+#
+# Prerequisites:
+#   - Docker & Docker Compose installed
+#   - .env file configured (see .env.example)
+#
+# ===========================================
+
+name: latta-csbot-unified
+
+services:
+  # ==========================================
+  # LLM Service - Ollama
+  # ==========================================
+  ollama:
+    container_name: latta-ollama
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list || exit 1"]
+    networks:
+      - latta-network
+
+  # ==========================================
+  # Database Services - Supabase
+  # ==========================================
+
+  studio:
+    container_name: latta-supabase-studio
+    image: supabase/studio:2025.12.17-sha-43f4f7f
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: [ "CMD", "node", "-e", "fetch('http://studio:3000/api/platform/profile').then((r) => {if (r.status !== 200) throw new Error(r.status)})" ]
+      timeout: 10s
+      interval: 5s
+      retries: 3
+    depends_on:
+      analytics:
+        condition: service_healthy
+    environment:
+      HOSTNAME: "::"
+      STUDIO_PG_META_URL: http://meta:8080
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_HOST: db
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PG_META_CRYPTO_KEY: ${PG_META_CRYPTO_KEY}
+      DEFAULT_ORGANIZATION_NAME: ${STUDIO_DEFAULT_ORGANIZATION:-Default Organization}
+      DEFAULT_PROJECT_NAME: ${STUDIO_DEFAULT_PROJECT:-Default Project}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      SUPABASE_URL: http://kong:8000
+      SUPABASE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL:-http://localhost:8000}
+      SUPABASE_ANON_KEY: ${ANON_KEY}
+      SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
+      AUTH_JWT_SECRET: ${JWT_SECRET}
+      LOGFLARE_API_KEY: ${LOGFLARE_PUBLIC_ACCESS_TOKEN}
+      LOGFLARE_PUBLIC_ACCESS_TOKEN: ${LOGFLARE_PUBLIC_ACCESS_TOKEN}
+      LOGFLARE_PRIVATE_ACCESS_TOKEN: ${LOGFLARE_PRIVATE_ACCESS_TOKEN}
+      LOGFLARE_URL: http://analytics:4000
+      NEXT_PUBLIC_ENABLE_LOGS: true
+      NEXT_ANALYTICS_BACKEND_PROVIDER: postgres
+    networks:
+      - latta-network
+
+  kong:
+    container_name: latta-supabase-kong
+    image: kong:2.8.1
+    restart: unless-stopped
+    ports:
+      - "${KONG_HTTP_PORT:-8000}:8000/tcp"
+      - "${KONG_HTTPS_PORT:-8443}:8443/tcp"
+    volumes:
+      - ./latta-csbot-database/volumes/api/kong.yml:/home/kong/temp.yml:ro
+    depends_on:
+      analytics:
+        condition: service_healthy
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /home/kong/kong.yml
+      KONG_DNS_ORDER: LAST,A,CNAME
+      KONG_PLUGINS: request-transformer,cors,key-auth,acl,basic-auth,request-termination,ip-restriction
+      KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
+      KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
+      SUPABASE_ANON_KEY: ${ANON_KEY}
+      SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
+      DASHBOARD_USERNAME: ${DASHBOARD_USERNAME:-supabase}
+      DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD:-password}
+    entrypoint: bash -c 'eval "echo \"$(cat ~/temp.yml)\"" > ~/kong.yml && /docker-entrypoint.sh kong docker-start'
+    networks:
+      - latta-network
+
+  auth:
+    container_name: latta-supabase-auth
+    image: supabase/gotrue:v2.184.0
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9999/health" ]
+      timeout: 5s
+      interval: 5s
+      retries: 3
+    depends_on:
+      db:
+        condition: service_healthy
+      analytics:
+        condition: service_healthy
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      API_EXTERNAL_URL: ${API_EXTERNAL_URL:-http://localhost:8000}
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-postgres}
+      GOTRUE_SITE_URL: ${SITE_URL:-http://localhost:3000}
+      GOTRUE_URI_ALLOW_LIST: ${ADDITIONAL_REDIRECT_URLS}
+      GOTRUE_DISABLE_SIGNUP: ${DISABLE_SIGNUP:-false}
+      GOTRUE_JWT_ADMIN_ROLES: service_role
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_JWT_EXP: ${JWT_EXPIRY:-3600}
+      GOTRUE_JWT_SECRET: ${JWT_SECRET}
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: ${ENABLE_EMAIL_SIGNUP:-true}
+      GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: ${ENABLE_ANONYMOUS_USERS:-false}
+      GOTRUE_MAILER_AUTOCONFIRM: ${ENABLE_EMAIL_AUTOCONFIRM:-false}
+      GOTRUE_SMTP_ADMIN_EMAIL: ${SMTP_ADMIN_EMAIL:-admin@example.com}
+      GOTRUE_SMTP_HOST: ${SMTP_HOST:-supabase-mail}
+      GOTRUE_SMTP_PORT: ${SMTP_PORT:-2500}
+      GOTRUE_SMTP_USER: ${SMTP_USER}
+      GOTRUE_SMTP_PASS: ${SMTP_PASS}
+      GOTRUE_SMTP_SENDER_NAME: ${SMTP_SENDER_NAME}
+      GOTRUE_MAILER_URLPATHS_INVITE: ${MAILER_URLPATHS_INVITE:-/auth/v1/verify}
+      GOTRUE_MAILER_URLPATHS_CONFIRMATION: ${MAILER_URLPATHS_CONFIRMATION:-/auth/v1/verify}
+      GOTRUE_MAILER_URLPATHS_RECOVERY: ${MAILER_URLPATHS_RECOVERY:-/auth/v1/verify}
+      GOTRUE_MAILER_URLPATHS_EMAIL_CHANGE: ${MAILER_URLPATHS_EMAIL_CHANGE:-/auth/v1/verify}
+      GOTRUE_EXTERNAL_PHONE_ENABLED: ${ENABLE_PHONE_SIGNUP:-true}
+      GOTRUE_SMS_AUTOCONFIRM: ${ENABLE_PHONE_AUTOCONFIRM:-true}
+    networks:
+      - latta-network
+
+  rest:
+    container_name: latta-supabase-rest
+    image: postgrest/postgrest:v14.1
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      analytics:
+        condition: service_healthy
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-postgres}
+      PGRST_DB_SCHEMAS: ${PGRST_DB_SCHEMAS:-public,storage}
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+      PGRST_DB_USE_LEGACY_GUCS: "false"
+      PGRST_APP_SETTINGS_JWT_SECRET: ${JWT_SECRET}
+      PGRST_APP_SETTINGS_JWT_EXP: ${JWT_EXPIRY:-3600}
+      PGRST_ADMIN_SERVER_PORT: 3001
+    healthcheck:
+      test: [ "CMD", "postgrest", "--version" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    command: [ "postgrest" ]
+    networks:
+      - latta-network
+
+  realtime:
+    container_name: latta-supabase-realtime
+    image: supabase/realtime:v2.68.0
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      analytics:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -sSfL --head -o /dev/null -H \"Authorization: Bearer ${ANON_KEY}\" http://localhost:4000/api/tenants/realtime-dev/health" ]
+      timeout: 5s
+      interval: 5s
+      retries: 3
+    environment:
+      PORT: 4000
+      DB_HOST: db
+      DB_PORT: ${POSTGRES_PORT:-5432}
+      DB_USER: supabase_admin
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: _supabase
+      DB_AFTER_CONNECT_QUERY: 'SET search_path TO _realtime'
+      DB_ENC_KEY: supabaserealtime
+      API_JWT_SECRET: ${JWT_SECRET}
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+      ERL_AFLAGS: -proto_dist inet_tcp
+      DNS_NODES: "''"
+      RLIMIT_NOFILE: "10000"
+      APP_NAME: realtime
+      SEED_SELF_HOST: "true"
+      RUN_JANITOR: "true"
+    networks:
+      - latta-network
+
+  storage:
+    container_name: latta-supabase-storage
+    image: supabase/storage-api:v1.33.0
+    restart: unless-stopped
+    volumes:
+      - storage_data:/var/lib/storage
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://storage:5000/status" ]
+      timeout: 5s
+      interval: 5s
+      retries: 3
+    depends_on:
+      db:
+        condition: service_healthy
+      rest:
+        condition: service_healthy
+      imgproxy:
+        condition: service_started
+    environment:
+      ANON_KEY: ${ANON_KEY}
+      SERVICE_KEY: ${SERVICE_ROLE_KEY}
+      POSTGREST_URL: http://rest:3000
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+      DATABASE_URL: postgres://supabase_storage_admin:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-postgres}
+      REQUEST_ALLOW_X_FORWARDED_PATH: "true"
+      FILE_SIZE_LIMIT: 52428800
+      STORAGE_BACKEND: file
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      TENANT_ID: stub
+      REGION: stub
+      GLOBAL_S3_BUCKET: stub
+      ENABLE_IMAGE_TRANSFORMATION: "true"
+      IMGPROXY_URL: http://imgproxy:5001
+    networks:
+      - latta-network
+
+  imgproxy:
+    container_name: latta-supabase-imgproxy
+    image: darthsim/imgproxy:v3.8.0
+    restart: unless-stopped
+    volumes:
+      - storage_data:/var/lib/storage
+    healthcheck:
+      test: [ "CMD", "imgproxy", "health" ]
+      timeout: 5s
+      interval: 5s
+      retries: 3
+    environment:
+      IMGPROXY_BIND: ":5001"
+      IMGPROXY_LOCAL_FILESYSTEM_ROOT: /
+      IMGPROXY_USE_ETAG: "true"
+      IMGPROXY_ENABLE_WEBP_DETECTION: ${IMGPROXY_ENABLE_WEBP_DETECTION:-true}
+    networks:
+      - latta-network
+
+  meta:
+    container_name: latta-supabase-meta
+    image: supabase/postgres-meta:v0.95.1
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      analytics:
+        condition: service_healthy
+    environment:
+      PG_META_PORT: 8080
+      PG_META_DB_HOST: db
+      PG_META_DB_PORT: ${POSTGRES_PORT:-5432}
+      PG_META_DB_NAME: ${POSTGRES_DB:-postgres}
+      PG_META_DB_USER: supabase_admin
+      PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      CRYPTO_KEY: ${PG_META_CRYPTO_KEY}
+    networks:
+      - latta-network
+
+  functions:
+    container_name: latta-supabase-edge-functions
+    image: supabase/edge-runtime:v1.69.28
+    restart: unless-stopped
+    volumes:
+      - ./latta-csbot-database/volumes/functions:/home/deno/functions
+    depends_on:
+      analytics:
+        condition: service_healthy
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      SUPABASE_URL: http://kong:8000
+      SUPABASE_ANON_KEY: ${ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+      SUPABASE_DB_URL: postgresql://postgres:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-postgres}
+      VERIFY_JWT: "${FUNCTIONS_VERIFY_JWT:-false}"
+    command: [ "start", "--main-service", "/home/deno/functions/main" ]
+    networks:
+      - latta-network
+
+  analytics:
+    container_name: latta-supabase-analytics
+    image: supabase/logflare:1.27.0
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "http://localhost:4000/health" ]
+      timeout: 5s
+      interval: 5s
+      retries: 10
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      LOGFLARE_NODE_HOST: 127.0.0.1
+      DB_USERNAME: supabase_admin
+      DB_DATABASE: _supabase
+      DB_HOSTNAME: db
+      DB_PORT: ${POSTGRES_PORT:-5432}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_SCHEMA: _analytics
+      LOGFLARE_PUBLIC_ACCESS_TOKEN: ${LOGFLARE_PUBLIC_ACCESS_TOKEN}
+      LOGFLARE_PRIVATE_ACCESS_TOKEN: ${LOGFLARE_PRIVATE_ACCESS_TOKEN}
+      LOGFLARE_SINGLE_TENANT: true
+      LOGFLARE_SUPABASE_MODE: true
+      POSTGRES_BACKEND_URL: postgresql://supabase_admin:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT:-5432}/_supabase
+      POSTGRES_BACKEND_SCHEMA: _analytics
+      LOGFLARE_FEATURE_FLAG_OVERRIDE: multibackend=true
+    networks:
+      - latta-network
+
+  db:
+    container_name: latta-supabase-db
+    image: supabase/postgres:15.8.1.085
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - ./latta-csbot-database/volumes/db/realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql
+      - ./latta-csbot-database/volumes/db/webhooks.sql:/docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql
+      - ./latta-csbot-database/volumes/db/roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql
+      - ./latta-csbot-database/volumes/db/jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql
+      - ./base/database_lc.sql:/docker-entrypoint-initdb.d/init-scripts/100-database_lc.sql:ro
+      - postgres_data:/var/lib/postgresql/data
+      - ./latta-csbot-database/volumes/db/_supabase.sql:/docker-entrypoint-initdb.d/init-scripts/01-_supabase.sql
+      - ./latta-csbot-database/volumes/db/logs.sql:/docker-entrypoint-initdb.d/migrations/99-logs.sql
+      - ./latta-csbot-database/volumes/db/pooler.sql:/docker-entrypoint-initdb.d/migrations/99-pooler.sql
+      - db_config:/etc/postgresql-custom
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -h localhost -d ${POSTGRES_DB:-postgres} && psql -U postgres -d ${POSTGRES_DB:-postgres} -tAc \"select case when to_regclass('public.files') is not null and to_regclass('public.documents') is not null and to_regclass('public.document_chunks') is not null then 1 else 0 end\" | grep -q 1" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      vector:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: /var/run/postgresql
+      PGPORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXP: ${JWT_EXPIRY:-3600}
+    command: [ "postgres", "-c", "config_file=/etc/postgresql/postgresql.conf", "-c", "log_min_messages=fatal" ]
+    networks:
+      - latta-network
+
+  vector:
+    container_name: latta-supabase-vector
+    image: timberio/vector:0.28.1-alpine
+    restart: unless-stopped
+    volumes:
+      - ./latta-csbot-database/volumes/logs/vector.yml:/etc/vector/vector.yml:ro
+      - ${DOCKER_SOCKET_LOCATION:-/var/run/docker.sock}:/var/run/docker.sock:ro
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://vector:9001/health" ]
+      timeout: 5s
+      interval: 5s
+      retries: 3
+    environment:
+      LOGFLARE_PUBLIC_ACCESS_TOKEN: ${LOGFLARE_PUBLIC_ACCESS_TOKEN}
+    command: [ "--config", "/etc/vector/vector.yml" ]
+    networks:
+      - latta-network
+
+  supavisor:
+    container_name: latta-supabase-pooler
+    image: supabase/supavisor:2.7.4
+    restart: unless-stopped
+    ports:
+      - "${POOLER_PROXY_PORT_TRANSACTION:-6543}:6543"
+    volumes:
+      - ./latta-csbot-database/volumes/pooler/pooler.exs:/etc/pooler/pooler.exs:ro
+    healthcheck:
+      test: [ "CMD", "curl", "-sSfL", "--head", "-o", "/dev/null", "http://127.0.0.1:4000/api/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      db:
+        condition: service_healthy
+      analytics:
+        condition: service_healthy
+    environment:
+      PORT: 4000
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      DATABASE_URL: ecto://supabase_admin:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT:-5432}/_supabase
+      CLUSTER_POSTGRES: true
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+      VAULT_ENC_KEY: ${VAULT_ENC_KEY}
+      API_JWT_SECRET: ${JWT_SECRET}
+      METRICS_JWT_SECRET: ${JWT_SECRET}
+      REGION: local
+      ERL_AFLAGS: -proto_dist inet_tcp
+      POOLER_TENANT_ID: ${POOLER_TENANT_ID:-your-tenant-id}
+      POOLER_DEFAULT_POOL_SIZE: ${POOLER_DEFAULT_POOL_SIZE:-20}
+      POOLER_MAX_CLIENT_CONN: ${POOLER_MAX_CLIENT_CONN:-100}
+      POOLER_POOL_MODE: transaction
+      DB_POOL_SIZE: ${POOLER_DB_POOL_SIZE:-5}
+    command: [ "/bin/sh", "-c", "/app/bin/migrate && /app/bin/supavisor eval \"$(cat /etc/pooler/pooler.exs)\" && /app/bin/server" ]
+    networks:
+      - latta-network
+
+  # ==========================================
+  # MongoDB - Document Database
+  # ==========================================
+  mongodb:
+    container_name: latta-mongodb
+    image: mongo:latest
+    restart: unless-stopped
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-root}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_DB:-chatbot}
+    volumes:
+      - mongo_data:/data/db
+      - ./latta-csbot-database/volumes/mongodb/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - latta-network
+
+  # ==========================================
+  # Redis - Cache Services
+  # ==========================================
+  redis:
+    container_name: latta-redis
+    image: redis/redis-stack:latest
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+      - "${REDIS_INSIGHT_PORT:-8002}:8001"
+    volumes:
+      - redis_data:/data
+    environment:
+      - REDIS_ARGS=--requirepass ${REDIS_PASSWORD} --notify-keyspace-events Ex
+    healthcheck:
+      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - latta-network
+
+  # ==========================================
+  # Admin Services
+  # ==========================================
+
+  admin-backend:
+    build:
+      context: ./latta-csbot-admin
+      dockerfile: docker/admin-backend.Dockerfile
+    container_name: latta-admin-backend
+    ports:
+      - "${ADMIN_PORT:-3002}:3002"
+      - "${DEBUG_PORT:-9229}:9229"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=${ADMIN_PORT}
+      - CACHE_UPDATE_INTERVAL=${CACHE_UPDATE_INTERVAL}
+      - CACHE_STARTUP_DELAY=${CACHE_STARTUP_DELAY}
+      - AUTO_CACHE_UPDATE=${AUTO_CACHE_UPDATE}
+      - DEBUG=${DEBUG}
+      - RAG_UPLOAD_PROXY_URL=${RAG_UPLOAD_PROXY_URL}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - SUPABASE_PUBLIC_URL=${SUPABASE_PUBLIC_URL}
+      - ANON_KEY=${ANON_KEY}
+      - SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL}
+      - OLLAMA_EMBED_MODEL=${OLLAMA_EMBED_MODEL}
+    volumes:
+      - admin-backend-cache:/app/cache
+      - admin-dashboard-cache:/app/src/dashboard_service/utils
+      - admin-json-data:/app/data
+      - ./latta-csbot-admin/backend/src/tools:/app/tools
+      - ./latta-csbot-admin/import-data:/app/import
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3002/api/overview" ]
+      interval: ${HEALTHCHECK_INTERVAL:-30s}
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - latta-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - multimodal-rag-upload
+
+  admin-frontend:
+    build:
+      context: ./latta-csbot-admin
+      dockerfile: docker/admin-frontend.Dockerfile
+      args:
+        SUPABASE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL}
+        ANON_KEY: ${ANON_KEY}
+    container_name: latta-admin-frontend
+    ports:
+      - "${ADMIN_FRONTEND_PORT:-81}:81"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+    depends_on:
+      admin-backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:81/" ]
+      interval: ${HEALTHCHECK_INTERVAL:-30s}
+      timeout: 10s
+      retries: 3
+    networks:
+      - latta-network
+
+  multimodal-rag-upload:
+    build:
+      context: ./latta-csbot-admin/upload_file
+      dockerfile: Dockerfile
+    container_name: latta-multimodal-rag
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL}
+      - OLLAMA_EMBED_MODEL=${OLLAMA_EMBED_MODEL}
+      - OLLAMA_TAGGING_MODEL=${OLLAMA_TAGGING_MODEL}
+      - OLLAMA_VISION_MODEL=${OLLAMA_VISION_MODEL}
+      - DISABLE_DOCLING_OCR=${DISABLE_DOCLING_OCR}
+      - OCR_CONCURRENCY=${OCR_CONCURRENCY}
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE}
+      - CHUNK_SIZE=${CHUNK_SIZE}
+      - CHUNK_OVERLAP=${CHUNK_OVERLAP}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_PUBLIC_URL=${SUPABASE_PUBLIC_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - FILE_RAG_BUCKET=${FILE_RAG_BUCKET}
+      - IMAGE_RAG_BUCKET=${IMAGE_RAG_BUCKET}
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - CUDA_VISIBLE_DEVICES=0
+    ports:
+      - "${RAG_UPLOAD_PORT:-8001}:8001"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - latta-network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8001/health" ]
+      interval: ${HEALTHCHECK_INTERVAL:-30s}
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ==========================================
+  # User Chat Services
+  # ==========================================
+
+  user-frontend:
+    build:
+      context: ./latta-csbot-user-v1
+      dockerfile: docker/frontend.Dockerfile
+    container_name: latta-user-frontend
+    ports:
+      - "${USER_FRONTEND_PORT:-80}:80"
+    depends_on:
+      user-backend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - latta-network
+
+  user-backend:
+    build:
+      context: ./latta-csbot-user-v1
+      dockerfile: docker/backend.Dockerfile
+    container_name: latta-user-backend
+    ports:
+      - "${USER_BACKEND_PORT:-3001}:3001"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - PORT=${USER_BACKEND_PORT}
+      - MONGO_URL=mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD}@mongodb:27017/${MONGO_DB}?authSource=admin
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_CHAT_DB=${REDIS_CHAT_DB}
+      - REDIS_VERIFY_DB=${REDIS_VERIFY_DB}
+      - REDIS_QUEUE_DB=${REDIS_QUEUE_DB}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - SUPABASE_PUBLIC_URL=${SUPABASE_PUBLIC_URL}
+      - AGENT_WEBHOOK_URL=${AGENT_WEBHOOK_URL}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL}
+      - AI_AGENT_QUEUE_NAME=${AI_AGENT_QUEUE_NAME}
+      - RATE_LIMIT_WINDOW_MS=${RATE_LIMIT_WINDOW_MS}
+      - RATE_LIMIT_MAX_REQUESTS=${RATE_LIMIT_MAX_REQUESTS}
+      - MAX_LOGIN_ATTEMPTS=${MAX_LOGIN_ATTEMPTS}
+      - BLOCK_DURATION_MS=${BLOCK_DURATION_MS}
+      - CHAT_RATE_LIMIT_WINDOW_MS=60000
+      - CHAT_RATE_LIMIT_MAX=60
+      - REDIS_SESSION_TTL=${REDIS_SESSION_TTL}
+      - EXTERNAL_AUTH_API=${EXTERNAL_AUTH_API}
+      - AUTH_BYPASS_MODE=${AUTH_BYPASS_MODE}
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/config" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - latta-network
+    depends_on:
+      - redis
+
+  ai-agent:
+    build:
+      context: ./latta-csbot-user-v1
+      dockerfile: docker/ai-agent.Dockerfile
+    container_name: latta-ai-agent
+    ports:
+      - "${AI_AGENT_PORT:-8765}:${AI_AGENT_PORT}"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - AI_AGENT_PORT=${AI_AGENT_PORT}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_QUEUE_DB=${REDIS_QUEUE_DB}
+      - REDIS_VERIFY_DB=${REDIS_VERIFY_DB}
+      - REDIS_COOLDOWN_DB=${REDIS_COOLDOWN_DB}
+      - AI_AGENT_QUEUE_NAME=${AI_AGENT_QUEUE_NAME}
+      - MS_FORM_QUEUE_NAME=${MS_FORM_QUEUE_NAME}
+      - RESET_PASSWORD_QUEUE_NAME=${RESET_PASSWORD_QUEUE_NAME}
+      - AGENT_WEBHOOK_URL=${AGENT_WEBHOOK_URL}
+      - API_BASE=${API_BASE}
+      - MS_FORMS_REPORT_URL=${MS_FORMS_REPORT_URL}
+    depends_on:
+      user-backend:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8765/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - latta-network
+    command: ["node", "ai-agent.js"]
+
+# ==========================================
+# Networks
+# ==========================================
+networks:
+  latta-network:
+    driver: bridge
+
+# ==========================================
+# Volumes
+# ==========================================
+volumes:
+  ollama_data:
+  postgres_data:
+  storage_data:
+  db_config:
+  mongo_data:
+  redis_data:
+  admin-backend-cache:
+  admin-dashboard-cache:
+  admin-json-data:

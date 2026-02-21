@@ -1,0 +1,47 @@
+<nav
+    class="w-full h-full bg-white dark:bg-surface-dark border-t border-slate-200 dark:border-slate-700 flex flex-row lg:flex-col justify-around lg:justify-between items-center lg:items-stretch lg:border-t-0 lg:border-r">
+
+    <!-- Logo (Desktop Only) -->
+    <div class="hidden lg:flex h-20 items-center justify-start px-6 border-b border-slate-100 dark:border-slate-800">
+        <div class="bg-primary p-2 rounded-xl text-black shadow-sm shrink-0"><span
+                class="material-symbols-outlined">dashboard</span></div>
+        <h1 class="ml-3 font-bold text-lg leading-tight">Admin<br /><span
+                class="text-xs font-normal text-slate-400">Portal</span></h1>
+    </div>
+
+    <!-- Menu Items -->
+    <div
+        class="flex-1 flex flex-row lg:flex-col gap-1 lg:gap-2 px-1 lg:px-3 py-1 lg:py-6 w-full justify-around lg:justify-start">
+        <button routerLink="/dashboard" routerLinkActive="text-primary-hover lg:bg-primary/10 font-bold"
+            [routerLinkActiveOptions]="{exact: true}"
+            class="nav-btn flex flex-col lg:flex-row items-center lg:gap-3 p-2 lg:p-3 rounded-xl transition-all text-slate-500 lg:text-slate-600 dark:text-slate-400 lg:hover:bg-slate-100 lg:dark:hover:bg-white/5 cursor-pointer touch-manipulation">
+            <span class="material-symbols-outlined text-2xl lg:text-xl mb-1 lg:mb-0"
+                routerLinkActive="text-primary-hover">grid_view</span>
+            <span class="text-[10px] lg:text-sm font-medium">Dashboard</span>
+        </button>
+        <button routerLink="/chats" routerLinkActive="text-primary-hover lg:bg-primary/10 font-bold"
+            class="nav-btn flex flex-col lg:flex-row items-center lg:gap-3 p-2 lg:p-3 rounded-xl transition-all text-slate-500 lg:text-slate-600 dark:text-slate-400 lg:hover:bg-slate-100 lg:dark:hover:bg-white/5 cursor-pointer touch-manipulation">
+            <span class="material-symbols-outlined text-2xl lg:text-xl mb-1 lg:mb-0"
+                routerLinkActive="text-primary-hover">chat</span>
+            <span class="text-[10px] lg:text-sm font-medium">Chats</span>
+        </button>
+        <button routerLink="/files" routerLinkActive="text-primary-hover lg:bg-primary/10 font-bold"
+            class="nav-btn flex flex-col lg:flex-row items-center lg:gap-3 p-2 lg:p-3 rounded-xl transition-all text-slate-500 lg:text-slate-600 dark:text-slate-400 lg:hover:bg-slate-100 lg:dark:hover:bg-white/5 cursor-pointer touch-manipulation">
+            <span class="material-symbols-outlined text-2xl lg:text-xl mb-1 lg:mb-0"
+                routerLinkActive="text-primary-hover">folder_shared</span>
+            <span class="text-[10px] lg:text-sm font-medium">Files</span>
+        </button>
+    </div>
+
+    <!-- User Profile (Desktop Only) -->
+    <div class="hidden lg:block p-4 border-t border-slate-100 dark:border-slate-800">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-500">A
+            </div>
+            <div>
+                <div class="text-sm font-bold">Admin</div>
+                <div class="text-xs text-slate-400">Online</div>
+            </div>
+        </div>
+    </div>
+</nav>

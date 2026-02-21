@@ -1,0 +1,362 @@
+<div class="view-section absolute inset-0 flex flex-col bg-white dark:bg-surface-dark fade-in">
+    <!-- Header -->
+    <div
+        class="h-14 lg:h-16 px-4 lg:px-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-white dark:bg-surface-dark shrink-0">
+        <h2 class="text-lg lg:text-xl font-black flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary">chat</span> Chats
+        </h2>
+        <div class="flex items-center gap-2">
+            <!-- Bulk Delete Button -->
+            @if (selectedIds().length > 0) {
+                <button (click)="bulkDelete()"
+                    class="hidden lg:flex items-center gap-1 px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg text-xs font-medium cursor-pointer">
+                    <span class="material-symbols-outlined text-sm">delete</span> Delete ({{ selectedIds().length }})
+                </button>
+            }
+            
+            <!-- Mobile Menu Toggle -->
+            <button (click)="mobileFilterOpen.set(!mobileFilterOpen())"
+                class="lg:hidden p-2 rounded-lg bg-slate-100 dark:bg-white/10 cursor-pointer">
+                <span class="material-symbols-outlined text-slate-500">more_vert</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="flex-1 flex overflow-hidden relative">
+        <!-- 1. Chat List -->
+        <div id="chat-list-panel"
+            class="w-full lg:w-96 shrink-0 border-r border-slate-100 dark:border-slate-700 flex flex-col bg-slate-50/50 dark:bg-black/10 transition-all">
+
+            <!-- Filter Section (Desktop) -->
+            <div
+                class="hidden lg:flex flex-col gap-3 p-4 border-b border-slate-100 dark:border-slate-700 bg-white dark:bg-surface-dark">
+                <div class="flex gap-2">
+                    <div class="flex-1">
+                        <label
+                            class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">From</label>
+                        <input type="date" [ngModel]="filterStart()" (ngModelChange)="filterStart.set($event)"
+                            class="w-full text-xs font-medium border border-slate-200 dark:border-slate-600 rounded-xl p-2.5 bg-slate-50 dark:bg-black/20 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none">
+                    </div>
+                    <div class="flex-1">
+                        <label
+                            class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">To</label>
+                        <input type="date" [ngModel]="filterEnd()" (ngModelChange)="filterEnd.set($event)"
+                            class="w-full text-xs font-medium border border-slate-200 dark:border-slate-600 rounded-xl p-2.5 bg-slate-50 dark:bg-black/20 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Feedback
+                        Type</label>
+                    <select [ngModel]="filterFeedback()" (ngModelChange)="filterFeedback.set($event)"
+                        class="w-full text-xs font-medium border border-slate-200 dark:border-slate-600 rounded-xl p-2.5 bg-slate-50 dark:bg-black/20 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none appearance-none">
+                        <option value="">All Feedback</option>
+                        <option value="like">👍 Positive (Like)</option>
+                        <option value="dislike">👎 Negative (Dislike)</option>
+                    </select>
+                </div>
+
+                <div class="flex gap-2 pt-1">
+                    <button (click)="applyFilter()"
+                        class="flex-1 bg-black dark:bg-white dark:text-black text-white text-xs font-bold py-2.5 rounded-xl hover:opacity-80 transition-opacity flex items-center justify-center gap-2 cursor-pointer shadow-sm">
+                        <span class="material-symbols-outlined text-sm">filter_list</span> Filter
+                    </button>
+                    <button (click)="resetFilter()"
+                        class="w-24 bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-black dark:hover:text-white text-xs font-bold py-2.5 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer">
+                        Reset
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mobile Filter Panel -->
+            @if (mobileFilterOpen()) {
+                <div
+                    class="lg:hidden p-4 border-b border-slate-200 bg-white dark:bg-surface-dark animate-slide-in">
+                    <div class="space-y-3">
+                        <!-- Date Filters -->
+                        <div class="flex gap-2">
+                            <input type="date" [ngModel]="filterStart()" (ngModelChange)="filterStart.set($event)" class="w-1/2 text-xs border rounded-xl p-2.5">
+                            <input type="date" [ngModel]="filterEnd()" (ngModelChange)="filterEnd.set($event)" class="w-1/2 text-xs border rounded-xl p-2.5">
+                        </div>
+                        <select [ngModel]="filterFeedback()" (ngModelChange)="filterFeedback.set($event)" class="w-full text-xs border rounded-xl p-2.5">
+                            <option value="">All Feedback</option>
+                            <option value="like">👍 Like Only</option>
+                            <option value="dislike">👎 Dislike Only</option>
+                        </select>
+                        <button (click)="applyFilter()"
+                            class="w-full bg-primary text-white text-xs font-bold py-3 rounded-xl shadow-lg shadow-primary/30">Apply
+                            Filters</button>
+                    </div>
+                </div>
+            }
+
+            <!-- Chat List -->
+            <div class="p-3 overflow-y-auto space-y-1 flex-1 scroll-smooth custom-scrollbar" id="chat-list-container">
+
+                <!-- Loading State -->
+                @if (loading() && chats().length === 0) {
+                    <div
+                        class="flex flex-col items-center justify-center py-20 text-slate-400">
+                        <div class="loader w-8 h-8 border-4 border-slate-200 border-t-primary mb-4"></div>
+                        <span class="text-xs font-bold">Loading chats...</span>
+                    </div>
+                }
+
+                <!-- Empty State -->
+                @if (!loading() && chats().length === 0) {
+                    <div
+                        class="flex flex-col items-center justify-center py-20 text-slate-300">
+                        <span class="material-symbols-outlined text-5xl mb-2 opacity-50">search_off</span>
+                        <span class="text-xs font-bold">No chats found</span>
+                    </div>
+                }
+
+                @for (group of groupedChats(); track group.title) {
+                    <!-- Day Group -->
+                    @if (group.type === 'day') {
+                        <details class="group mb-4 border-b border-transparent last:mb-0" open>
+                            <summary
+                                class="list-none flex items-center justify-between px-2 py-2 mb-2 cursor-pointer transition-colors sticky top-0 z-10">
+                                <span class="font-bold text-xs text-slate-400 uppercase tracking-widest pl-1">{{ group.title
+                                    }}</span>
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="text-[10px] bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded-full text-slate-500 dark:text-slate-400 font-bold min-w-[20px] text-center">{{
+                                        group.chats.length }}</span>
+                                </div>
+                            </summary>
+
+                            <div class="space-y-2">
+                                @for (chat of group.chats; track chat.sessionId) {
+                                    <div class="flex items-start gap-2 group/row">
+                                        <div class="pt-3 pl-1">
+                                            <input type="checkbox" [checked]="isSelected(chat.sessionId || '')"
+                                                (change)="toggleSelect(chat.sessionId || '')"
+                                                class="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary cursor-pointer transition-all hover:scale-110">
+                                        </div>
+                                        <div (click)="selectChat(chat)"
+                                            class="flex-1 p-3.5 bg-white dark:bg-surface-dark border border-slate-100 dark:border-slate-700/50 rounded-2xl cursor-pointer hover:border-primary/50 hover:shadow-md hover:-translate-y-0.5 transition-all group/item relative overflow-hidden"
+                                            [class.border-primary]="selectedChat()?.sessionId === chat.sessionId"
+                                            [class.bg-blue-50/50]="selectedChat()?.sessionId === chat.sessionId"
+                                            [class.dark:bg-blue-900/10]="selectedChat()?.sessionId === chat.sessionId"
+                                            [class.shadow-sm]="selectedChat()?.sessionId === chat.sessionId"
+                                            [class.ring-1]="selectedChat()?.sessionId === chat.sessionId"
+                                            [class.ring-primary/20]="selectedChat()?.sessionId === chat.sessionId">
+
+                                            <div class="flex justify-between items-center mb-1.5">
+                                                <span
+                                                    class="font-bold text-xs text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                                                    <span class="w-2 h-2 rounded-full"
+                                                        [class.bg-green-500]="chat.messages[chat.messages.length-1]?.sender === 'bot'"
+                                                        [class.bg-slate-300]="chat.messages[chat.messages.length-1]?.sender !== 'bot'"></span>
+                                                    <span class="font-mono opacity-70">{{ chat.sessionId.substring(0,8)
+                                                        }}</span>
+                                                </span>
+                                                <span
+                                                    class="text-[10px] text-slate-400 font-bold bg-slate-50 dark:bg-black/20 px-1.5 py-0.5 rounded">{{
+                                                    chat.updatedAt | date:'HH:mm' }}</span>
+                                            </div>
+
+                                            <div
+                                                class="text-xs text-slate-500 line-clamp-2 dark:text-slate-400 leading-relaxed font-medium">
+                                                {{ chat.messages[chat.messages.length-1]?.text || '(No messages)' }}
+                                            </div>
+
+                                            @if (hasFeedback(chat)) {
+                                                <div class="absolute bottom-2 right-2 flex gap-1">
+                                                    @if (hasLike(chat)) {
+                                                        <span
+                                                            class="material-symbols-outlined text-[10px] text-green-500 bg-green-50 p-0.5 rounded-full">thumb_up</span>
+                                                    }
+                                                    @if (hasDislike(chat)) {
+                                                        <span
+                                                            class="material-symbols-outlined text-[10px] text-red-500 bg-red-50 p-0.5 rounded-full">thumb_down</span>
+                                                    }
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </details>
+                    }
+
+                    <!-- Year Group (Collapsed by default logic mostly same but styled better) -->
+                    @if (group.type === 'year') {
+                        <details class="group mb-2">
+                            <summary
+                                class="list-none flex items-center justify-between px-3 py-3 bg-white dark:bg-surface-dark rounded-xl border border-slate-100 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5 transition-all shadow-sm">
+                                <span
+                                    class="font-bold text-xs text-primary uppercase tracking-wider flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-sm">calendar_month</span> {{ group.title }}
+                                </span>
+                                <span
+                                    class="text-[10px] bg-primary/10 text-primary-hover px-2 py-0.5 rounded-full font-bold">{{
+                                    group.count }} chats</span>
+                            </summary>
+                            <div
+                                class="pl-4 pt-2 border-l-2 border-dashed border-slate-200 dark:border-slate-700 ml-4 my-2">
+                                <!-- Helper to show year content layout if needed, improved simple details -->
+                                @for (month of group.months; track month.name) {
+                                    <details class="group/month mb-2">
+                                        <summary
+                                            class="list-none text-xs font-bold text-slate-500 cursor-pointer hover:text-primary py-1 flex items-center justify-between">
+                                            {{ month.name }} <span class="text-[9px] bg-slate-100 px-1.5 rounded">{{
+                                                month.chats.length }}</span>
+                                        </summary>
+                                        <div class="pt-1 pb-2 pl-4 pr-2 space-y-2">
+                                            @for (chat of month.chats; track chat.sessionId) {
+                                                <div class="flex items-start gap-2 group/row">
+                                                    <div class="pt-3 pl-1">
+                                                        <input type="checkbox" [checked]="isSelected(chat.sessionId || '')"
+                                                            (change)="toggleSelect(chat.sessionId || '')"
+                                                            class="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary cursor-pointer transition-all hover:scale-110">
+                                                    </div>
+                                                    <div (click)="selectChat(chat)"
+                                                        class="flex-1 p-3.5 bg-white dark:bg-surface-dark border border-slate-100 dark:border-slate-700/50 rounded-2xl cursor-pointer hover:border-primary/50 hover:shadow-md hover:-translate-y-0.5 transition-all group/item relative overflow-hidden"
+                                                        [class.border-primary]="selectedChat()?.sessionId === chat.sessionId"
+                                                        [class.bg-blue-50/50]="selectedChat()?.sessionId === chat.sessionId"
+                                                        [class.dark:bg-blue-900/10]="selectedChat()?.sessionId === chat.sessionId"
+                                                        [class.shadow-sm]="selectedChat()?.sessionId === chat.sessionId"
+                                                        [class.ring-1]="selectedChat()?.sessionId === chat.sessionId"
+                                                        [class.ring-primary/20]="selectedChat()?.sessionId === chat.sessionId">
+
+                                                        <div class="flex justify-between items-center mb-1.5">
+                                                            <span
+                                                                class="font-bold text-xs text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                                                                <span class="w-2 h-2 rounded-full"
+                                                                    [class.bg-green-500]="chat.messages[chat.messages.length-1]?.sender === 'bot'"
+                                                                    [class.bg-slate-300]="chat.messages[chat.messages.length-1]?.sender !== 'bot'"></span>
+                                                                <span class="font-mono opacity-70">{{ chat.sessionId.substring(0,8)
+                                                                    }}</span>
+                                                            </span>
+                                                            <span
+                                                                class="text-[10px] text-slate-400 font-bold bg-slate-50 dark:bg-black/20 px-1.5 py-0.5 rounded">{{
+                                                                chat.updatedAt | date:'HH:mm' }}</span>
+                                                        </div>
+
+                                                        <div
+                                                            class="text-xs text-slate-500 line-clamp-2 dark:text-slate-400 leading-relaxed font-medium">
+                                                            {{ chat.messages[chat.messages.length-1]?.text || '(No messages)' }}
+                                                        </div>
+
+                                                        @if (hasFeedback(chat)) {
+                                                            <div class="absolute bottom-2 right-2 flex gap-1">
+                                                                @if (hasLike(chat)) {
+                                                                    <span
+                                                                        class="material-symbols-outlined text-[10px] text-green-500 bg-green-50 p-0.5 rounded-full">thumb_up</span>
+                                                                }
+                                                                @if (hasDislike(chat)) {
+                                                                    <span
+                                                                        class="material-symbols-outlined text-[10px] text-red-500 bg-red-50 p-0.5 rounded-full">thumb_down</span>
+                                                                }
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                    </details>
+                                }
+                            </div>
+                        </details>
+                    }
+                }
+
+                @if (chats().length < totalAvailable()) {
+                    <div class="p-2 pt-4 pb-8">
+                        <button (click)="loadMore()" [disabled]="loading()"
+                            class="w-full py-3 bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-700 hover:border-primary hover:text-primary rounded-xl text-xs font-bold text-slate-500 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-95">
+                            @if (!loading()) {
+                                <span>Load More History</span>
+                            } @else {
+                                <span class="loader w-3 h-3 border-slate-400"></span>
+                            }
+                        </button>
+                        <p class="text-[10px] text-center text-slate-300 mt-2">Showing {{ chats().length }} of {{
+                            totalAvailable() }}</p>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- 2. Chat Detail -->
+        <div [class.translate-x-full]="!showMobileDetail()"
+            class="absolute inset-0 lg:static w-full h-full bg-white dark:bg-[#1a1a1d] z-20 flex flex-col transform translate-x-full lg:translate-x-0 transition-transform duration-300">
+            <div class="lg:hidden h-14 border-b flex items-center px-4 bg-white dark:bg-surface-dark shrink-0 gap-3">
+                <button (click)="closeMobileDetail()" class="p-2 -ml-2 rounded-full hover:bg-slate-100 cursor-pointer">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                </button>
+                <span class="font-bold text-sm truncate">Chat Details</span>
+            </div>
+
+            <div class="flex-1 flex flex-col h-full overflow-hidden relative">
+                @if (!selectedChat()) {
+                    <div class="flex-1 flex items-center justify-center text-slate-400 flex-col">
+                        <span class="material-symbols-outlined text-5xl mb-4 opacity-30">forum</span>
+                        <p>Select a chat</p>
+                    </div>
+                }
+
+                @if (selectedChat()) {
+                    <div
+                        class="hidden lg:flex h-14 border-b border-slate-200 dark:border-slate-700 items-center px-6 bg-white dark:bg-surface-dark justify-between shrink-0">
+                        <div class="font-bold text-sm">Session: <span class="font-mono text-slate-500">{{
+                                selectedChat()?.sessionId }}</span></div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs bg-slate-100 px-2 py-1 rounded text-slate-500">{{
+                                selectedChat()?.updatedAt | date:'medium' }}</span>
+                            <button (click)="deleteChat(selectedChat()?.sessionId || '')"
+                                class="p-1.5 hover:bg-red-100 rounded-lg text-red-500 cursor-pointer">
+                                <span class="material-symbols-outlined text-lg">delete</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div
+                        class="flex-1 overflow-y-auto py-4 px-4 bg-slate-50 dark:bg-[#1a1a1d] scroll-smooth space-y-4 pb-24 lg:pb-4">
+                        @if (filteredMessages().length === 0) {
+                            <div
+                                class="flex-1 flex items-center justify-center text-slate-400">No matching messages.</div>
+                        }
+
+                        @for (m of filteredMessages(); track m.msgId) {
+                            <div class="flex w-full"
+                                [class.justify-start]="m.sender === 'user'"
+                                [class.justify-end]="m.sender !== 'user'">
+                                <div class="max-w-[85%] lg:max-w-[75%]">
+                                    <div class="p-3 rounded-2xl text-sm shadow-sm"
+                                        [class.bg-primary]="m.sender !== 'user'"
+                                        [class.text-black]="m.sender !== 'user'"
+                                        [class.rounded-tr-none]="m.sender !== 'user'"
+                                        [class.bg-white]="m.sender === 'user'"
+                                        [class.dark:bg-surface-dark]="m.sender === 'user'"
+                                        [class.border]="m.sender === 'user'"
+                                        [class.border-slate-100]="m.sender === 'user'"
+                                        [class.dark:border-slate-700]="m.sender === 'user'"
+                                        [class.rounded-tl-none]="m.sender === 'user'"
+                                        [class.dark:text-white]="m.sender === 'user'">
+                                        {{ m.text }}
+                                    </div>
+                                    <div class="text-[10px] text-slate-400 mt-1 px-1 flex items-center gap-1"
+                                        [class.justify-end]="m.sender !== 'user'"
+                                        [class.justify-start]="m.sender === 'user'">
+                                        <span>{{ m.sender === 'user' ? 'User' : 'Bot' }} • {{ (m.createdAt || m.time) |
+                                            date:'HH:mm:ss' }}</span>
+                                        @if (m.feedback === 'like') {
+                                            <span
+                                                class="material-symbols-outlined text-[14px] text-green-600 bg-green-50 rounded-full p-0.5">thumb_up</span>
+                                        }
+                                        @if (m.feedback === 'dislike') {
+                                            <span
+                                                class="material-symbols-outlined text-[14px] text-red-500 bg-red-50 rounded-full p-0.5">thumb_down</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

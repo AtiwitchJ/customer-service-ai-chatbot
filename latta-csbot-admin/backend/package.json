@@ -1,0 +1,26 @@
+{
+  "name": "latta-csbot-admin-backend",
+  "version": "2.0.0",
+  "description": "Latta CSBot Admin Backend - JSON-based storage",
+  "main": "server_combined.js",
+  "scripts": {
+    "start": "node server_combined.js",
+    "dev": "nodemon server_combined.js",
+    "convert": "node tools/convert-mongodb-chats.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.89.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "http-proxy-middleware": "^3.0.0",
+    "mongoose": "^9.1.2",
+    "multer": "^2.0.2",
+    "stopword": "^3.1.5",
+    "helmet": "^8.1.0",
+    "express-rate-limit": "^7.1.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}

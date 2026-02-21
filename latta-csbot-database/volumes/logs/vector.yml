@@ -1,0 +1,14 @@
+api:
+  enabled: true
+  address: "0.0.0.0:9001"
+
+sources:
+  docker_logs:
+    type: docker_logs
+
+sinks:
+  console:
+    type: console
+    inputs: ["docker_logs"]
+    encoding:
+      codec: json

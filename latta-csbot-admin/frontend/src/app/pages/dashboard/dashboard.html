@@ -1,0 +1,229 @@
+<div class="view-section absolute inset-0 p-4 lg:p-10 overflow-y-auto fade-in">
+    <!-- Header & Global Controls -->
+    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 lg:mb-8 gap-4">
+        <div>
+            <h2 class="text-2xl lg:text-3xl font-black flex items-center gap-2">
+                <span class="text-3xl">🌐</span> System
+            </h2>
+            <p class="text-slate-500 ml-10 text-sm">Real-time stats</p>
+        </div>
+
+        <div class="w-full lg:w-auto flex flex-col sm:flex-row gap-3">
+            <!-- Import JSON -->
+            <label class="w-full sm:w-auto justify-center px-4 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl text-xs font-bold transition-all flex items-center gap-2 hover:bg-green-100 text-green-700 dark:text-green-400 h-9 cursor-pointer touch-manipulation">
+                <span class="material-symbols-outlined text-sm">upload_file</span>
+                Import JSON
+                <input type="file" accept=".json,application/json" (change)="importJson($event)" class="hidden">
+            </label>
+            
+            <!-- Export JSON -->
+            <button (click)="exportJson()"
+                class="w-full sm:w-auto justify-center px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl text-xs font-bold transition-all flex items-center gap-2 hover:bg-blue-100 text-blue-700 dark:text-blue-400 h-9 cursor-pointer touch-manipulation">
+                <span class="material-symbols-outlined text-sm">download</span>
+                Export
+            </button>
+            
+            <button (click)="refresh()" [disabled]="loading()"
+                class="w-full sm:w-auto justify-center px-4 py-2 bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-2 hover:bg-slate-50 hover:text-black shadow-sm text-slate-500 dark:text-slate-300 h-9 cursor-pointer touch-manipulation">
+                @if (!loading()) {
+                    <span class="material-symbols-outlined text-sm">refresh</span>
+                } @else {
+                    <div class="loader w-3 h-3 border-slate-400"></div>
+                }
+                Refresh
+            </button>
+
+            <div
+                class="bg-white dark:bg-surface-dark p-1 rounded-xl border border-slate-100 dark:border-slate-700 flex shadow-sm overflow-x-auto w-full sm:w-auto">
+                <button (click)="setPeriod('last_day')"
+                    [class.bg-black]="period() === 'last_day'"
+                    [class.text-white]="period() === 'last_day'"
+                    [class.shadow-sm]="period() === 'last_day'"
+                    [class.text-slate-500]="period() !== 'last_day'"
+                    [class.hover:text-black]="period() !== 'last_day'"
+                    [class.hover:bg-slate-50]="period() !== 'last_day'"
+                    class="period-btn px-3 py-2 text-xs font-bold rounded-lg transition-all whitespace-nowrap flex-1 cursor-pointer">24h</button>
+                <button (click)="setPeriod('7days')"
+                    [class.bg-black]="period() === '7days'"
+                    [class.text-white]="period() === '7days'"
+                    [class.shadow-sm]="period() === '7days'"
+                    [class.text-slate-500]="period() !== '7days'"
+                    [class.hover:text-black]="period() !== '7days'"
+                    [class.hover:bg-slate-50]="period() !== '7days'"
+                    class="period-btn px-3 py-2 text-xs font-bold rounded-lg transition-all whitespace-nowrap flex-1 cursor-pointer">7D</button>
+                <button (click)="setPeriod('30days')"
+                    [class.bg-black]="period() === '30days'"
+                    [class.text-white]="period() === '30days'"
+                    [class.shadow-sm]="period() === '30days'"
+                    [class.text-slate-500]="period() !== '30days'"
+                    [class.hover:text-black]="period() !== '30days'"
+                    [class.hover:bg-slate-50]="period() !== '30days'"
+                    class="period-btn px-3 py-2 text-xs font-bold rounded-lg transition-all whitespace-nowrap flex-1 cursor-pointer">30D</button>
+                <button (click)="setPeriod('1year')"
+                    [class.bg-black]="period() === '1year'"
+                    [class.text-white]="period() === '1year'"
+                    [class.shadow-sm]="period() === '1year'"
+                    [class.text-slate-500]="period() !== '1year'"
+                    [class.hover:text-black]="period() !== '1year'"
+                    [class.hover:bg-slate-50]="period() !== '1year'"
+                    class="period-btn px-3 py-2 text-xs font-bold rounded-lg transition-all whitespace-nowrap flex-1 cursor-pointer">1Y</button>
+                <button (click)="setPeriod('all')"
+                    [class.bg-black]="period() === 'all'"
+                    [class.text-white]="period() === 'all'"
+                    [class.shadow-sm]="period() === 'all'"
+                    [class.text-slate-500]="period() !== 'all'"
+                    [class.hover:text-black]="period() !== 'all'"
+                    [class.hover:bg-slate-50]="period() !== 'all'"
+                    class="period-btn px-3 py-2 text-xs font-bold rounded-lg transition-all whitespace-nowrap flex-1 cursor-pointer">All</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 lg:gap-6 mb-6 lg:mb-8">
+        <!-- 1. Total Sessions -->
+        <div
+            class="bg-white dark:bg-surface-dark p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col justify-between">
+            <div class="p-2 bg-blue-50 text-blue-600 rounded-xl w-fit mb-3">
+                <span class="material-symbols-outlined text-xl">forum</span>
+            </div>
+            <h3 class="text-2xl font-black">{{ stats().totalMessages | number }}</h3>
+            <p class="text-slate-500 text-xs">Total Sessions</p>
+        </div>
+
+        <!-- 2. Unique Sessions -->
+        <div
+            class="bg-white dark:bg-surface-dark p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col justify-between">
+            <div class="p-2 bg-indigo-50 text-indigo-600 rounded-xl w-fit mb-3">
+                <span class="material-symbols-outlined text-xl">group</span>
+            </div>
+            <h3 class="text-2xl font-black">{{ userStats().uniqueSessions | number }}</h3>
+            <p class="text-slate-500 text-xs">Unique Sessions</p>
+        </div>
+
+        <!-- 3. User Feedback -->
+        <div
+            class="bg-white dark:bg-surface-dark p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col justify-between">
+            <div class="flex justify-between items-start">
+                <div class="p-2 bg-purple-50 text-purple-600 rounded-xl w-fit">
+                    <span class="material-symbols-outlined text-xl">thumbs_up_down</span>
+                </div>
+                <span [class]="happinessClass()">
+                    @if (loading()) {
+                        <span class="animate-pulse">...</span>
+                    } @else {
+                        <span>{{ happiness().emoji }} {{ happiness().score }}%</span>
+                    }
+                </span>
+            </div>
+            <div class="mt-3">
+                <div class="flex items-baseline gap-1">
+                    <span class="text-xl font-black text-green-600">{{ stats().totalLikes | number }}</span>
+                    <span class="text-slate-400">/</span>
+                    <span class="text-xl font-black text-red-500">{{ stats().totalDislikes | number }}</span>
+                </div>
+                <p class="text-slate-500 text-xs">Likes / Dislikes</p>
+            </div>
+        </div>
+
+        <!-- 4. Response Time -->
+        <div
+            class="bg-white dark:bg-surface-dark p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col justify-between">
+            <div class="p-2 bg-orange-50 text-orange-600 rounded-xl w-fit mb-3">
+                <span class="material-symbols-outlined text-xl">timer</span>
+            </div>
+            <h3 class="text-2xl font-black">{{ stats().avgResponseTime || '0.00' }}s</h3>
+            <p class="text-slate-500 text-xs">Avg Response Time</p>
+        </div>
+
+        <!-- 5. Session Duration -->
+        <div
+            class="bg-white dark:bg-surface-dark p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col justify-between">
+            <div class="p-2 bg-teal-50 text-teal-600 rounded-xl w-fit mb-3">
+                <span class="material-symbols-outlined text-xl">schedule</span>
+            </div>
+            <h3 class="text-2xl font-black">{{ stats().avgSessionDuration || '0.00s' }}</h3>
+            <p class="text-slate-500 text-xs">Avg Session Duration</p>
+        </div>
+
+        <!-- 6. Avg Messages/Session -->
+        <div
+            class="bg-white dark:bg-surface-dark p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col justify-between">
+            <div class="p-2 bg-pink-50 text-pink-600 rounded-xl w-fit mb-3">
+                <span class="material-symbols-outlined text-xl">chat_bubble</span>
+            </div>
+            <h3 class="text-2xl font-black">{{ userStats().avgMessagesPerSession }}</h3>
+            <p class="text-slate-500 text-xs">Avg Msgs/Session</p>
+        </div>
+    </div>
+
+    <!-- Charts Row 1 -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- Session Trend -->
+        <div
+            class="bg-white dark:bg-surface-dark rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
+            <h3 class="text-lg font-bold flex items-center gap-2 mb-4">
+                <span class="material-symbols-outlined text-blue-500">trending_up</span> Session Trend
+            </h3>
+            <div class="h-[250px] w-full">
+                <canvas #sessionTrendCanvas></canvas>
+            </div>
+        </div>
+
+        <!-- Feedback Pie Chart -->
+        <div
+            class="bg-white dark:bg-surface-dark rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
+            <h3 class="text-lg font-bold flex items-center gap-2 mb-4">
+                <span class="material-symbols-outlined text-purple-500">thumb_up</span> Feedback Overview
+            </h3>
+            <div class="h-[250px] w-full flex items-center justify-center">
+                <canvas #feedbackTrendCanvas></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 2 -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- Peak Hours -->
+        <div
+            class="bg-white dark:bg-surface-dark rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
+            <h3 class="text-lg font-bold flex items-center gap-2 mb-4">
+                <span class="material-symbols-outlined text-violet-500">schedule</span> Peak Hours
+            </h3>
+            <div class="h-[250px] w-full">
+                <canvas #peakHoursCanvas></canvas>
+            </div>
+        </div>
+
+        <!-- Top Questions -->
+        <div
+            class="bg-white dark:bg-surface-dark rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
+            <h3 class="text-lg font-bold flex items-center gap-2 mb-4">
+                <span class="material-symbols-outlined text-green-500">help</span> Top Questions
+            </h3>
+            <div class="space-y-2 max-h-[250px] overflow-y-auto">
+                @if (topQuestions().length === 0) {
+                    <div class="text-slate-400 text-sm text-center py-4">No data</div>
+                }
+                @for (q of topQuestions(); track $index) {
+                    <div class="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
+                        <span class="text-xs font-bold text-slate-400 mt-1">{{ $index + 1 }}</span>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm text-slate-700 dark:text-slate-200 truncate">{{ truncateText(q.text ?? q.question, 60) }}
+                            </p>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="text-xs text-slate-400">{{ q.count }} times</span>
+                                @if (q.likes) {
+                                    <span class="text-xs text-green-500">👍 {{ q.likes }}</span>
+                                }
+                                @if (q.dislikes) {
+                                    <span class="text-xs text-red-500">👎 {{ q.dislikes }}</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

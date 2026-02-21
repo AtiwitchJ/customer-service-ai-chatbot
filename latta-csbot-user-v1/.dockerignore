@@ -1,0 +1,16 @@
+node_modules
+npm-debug.log
+.git
+.vscode
+.env
+.env.local
+.env.*.local
+dist
+tmp
+coverage
+*.md
+!README.md
+!DOCKER_DEPLOY.md
+docker-compose.override.yml
+docker-compose.prod.yml
+build

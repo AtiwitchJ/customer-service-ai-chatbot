@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ALL Leaming - Customer Service Chatbot</title>
+    <link rel="icon" type="image/png" href="image/logo-All-Learning-New-Final.png">
+
+    <!-- Load Kanit Font (Google Fonts - trusted source, SRI not applicable for dynamic content) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet"
+        crossorigin="anonymous">
+
+    <!-- Bootstrap 5 CSS (Local - no SRI needed for local files) -->
+    <link href="lib/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom overrides -->
+    <link rel="stylesheet" href="style.css?v=20260126a">
+</head>
+
+<body class="bg-secondary-subtle vh-100 vw-100 overflow-hidden d-flex justify-content-center align-items-center">
+    <div class="chat-wrapper d-flex flex-column bg-light position-relative overflow-hidden shadow-lg">
+
+        <!-- Backdrop for Menu -->
+        <div id="sidebar-backdrop" class="sidebar-backdrop" onclick="handleMenuClick()"></div>
+
+        <!-- Header -->
+        <header
+            class="bg-primary text-white px-3 py-3 d-flex align-items-center justify-content-between flex-shrink-0 shadow-sm position-relative z-3">
+            <div class="d-flex align-items-center gap-3">
+                <div class="bot-icon bg-light rounded-3 p-2 d-flex align-items-center justify-content-center">
+                    <img src="image/logo-All-Learning-New-Final.png" alt="Logo"
+                        style="width: 50px; height: 30px; object-fit: contain;">
+                </div>
+                <div>
+                    <h1 class="fs-6 fw-semibold mb-0 lh-sm">น้องลาเต้ - ALL Leaming</h1>
+                    <div class="small text-white-50 fw-light">AI Assistant & Support</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Chat Messages -->
+        <div class="chat-container flex-grow-1 p-2 overflow-auto d-flex flex-column gap-2 position-relative"
+            id="chatMessages">
+
+            <!-- Typing Indicator -->
+            <div class="typing-indicator-wrapper d-none d-flex gap-2 align-items-end mb-3" id="typingIndicator">
+                <div
+                    class="avatar rounded-circle bg-light border d-flex align-items-center justify-content-center overflow-hidden">
+                    <img src="image/bot_avatar.png" alt="Bot Avatar" class="w-100 h-100 object-fit-cover">
+                </div>
+                <div class="typing-bubble bg-white border rounded-4 px-3 py-2 d-flex gap-1 align-items-center">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Floating Side Pills (Left Side) -->
+        <div class="floating-pills position-absolute d-flex flex-column align-items-start gap-2" id="floatingPills">
+            <button
+                class="pill-btn btn btn-outline-danger rounded-pill d-flex align-items-center gap-2 px-3 py-2 shadow-sm"
+                onclick="openReportForm()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                ต้องการแจ้งปัญหากับเจ้าหน้าที่
+            </button>
+            <button
+                class="pill-btn btn btn-outline-danger rounded-pill d-flex align-items-center gap-2 px-3 py-2 shadow-sm"
+                onclick="handleLogout()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                ออกจากระบบ
+            </button>
+        </div>
+
+        <!-- Login Overlay -->
+        <div id="loginSection"
+            class="login-overlay position-absolute top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-end z-3">
+            <div class="login-content bg-white w-100 p-4 pb-5 rounded-top-4">
+                <div class="login-icon bg-info bg-opacity-10 text-primary rounded-4 mx-auto mb-4 d-flex align-items-center justify-content-center"
+                    style="width: 64px; height: 64px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                        <circle cx="8.5" cy="7" r="4" />
+                        <line x1="20" y1="8" x2="20" y2="14" />
+                        <line x1="23" y1="11" x2="17" y2="11" />
+                    </svg>
+                </div>
+                <h2 class="fs-4 fw-semibold text-dark text-center mb-2">เข้าสู่ระบบ</h2>
+                <p class="text-secondary small text-center mb-4">กรุณากรอกรหัสพนักงานเพื่อยืนยันตัวตน</p>
+                <form id="loginForm" class="d-flex flex-column gap-3">
+                    <input type="text" id="loginCardID" class="form-control form-control-lg rounded-3 bg-light"
+                        placeholder="รหัสบัตรประชาชน (Card ID)" required>
+                    <input type="email" id="loginEmail" class="form-control form-control-lg rounded-3 bg-light"
+                        placeholder="อีเมล (CP ALL Email)" required>
+                    <div id="loginError" class="alert alert-danger py-2 small d-none" role="alert"></div>
+                    <button type="submit" class="btn btn-primary btn-lg w-100 rounded-3 fw-medium"
+                        id="loginSubmitBtn">เข้าใช้งาน</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="input-area bg-white px-3 py-2 pb-4 flex-shrink-0 shadow-sm position-relative">
+            <form id="chatForm" class="d-flex gap-2 align-items-end">
+                <!-- Hamburger Menu Button -->
+                <button type="button"
+                    class="btn btn-light border rounded-3 flex-shrink-0 menu-toggle-btn d-flex align-items-center justify-content-center p-0"
+                    id="menuBtn" onclick="handleMenuClick()" title="เมนู" style="width: 44px; height: 44px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+
+                <textarea id="userInput" class="form-control rounded-pill px-4 py-2 bg-light message-input"
+                    placeholder="พิมพ์ข้อความของคุณ..." rows="1" required oninput="autoExpandTextarea(this)"></textarea>
+                <button type="button" class="btn btn-primary rounded-3 flex-shrink-0 send-btn shadow-sm" id="sendBtn"
+                    style="width: 44px; height: 44px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- AFK Warning Popup -->
+    <div id="afkWarningPopup"
+        class="afk-popup position-fixed top-0 start-0 w-100 h-100 d-none justify-content-center align-items-center">
+        <div class="afk-popup-content bg-white rounded-4 p-4 text-center shadow-lg" style="max-width: 360px;">
+            <div class="afk-icon bg-warning bg-opacity-25 text-warning rounded-4 mx-auto mb-4 d-flex align-items-center justify-content-center fs-1"
+                style="width: 64px; height: 64px;">⏰</div>
+            <h3 class="fs-4 fw-semibold text-dark mb-2">คุณยังอยู่ไหม?</h3>
+            <p class="text-secondary small mb-2">ระบบจะออกจากระบบอัตโนมัติใน <span id="afkCountdown"
+                    class="badge bg-danger fs-6 px-2 py-1">30</span> วินาที</p>
+            <button class="btn btn-primary btn-lg w-100 rounded-3 mt-4"
+                onclick="dismissAfkWarning()">ฉันยังอยู่</button>
+        </div>
+    </div>
+
+
+
+    <!-- Bootstrap 5 JS (Local - no SRI needed for local files) -->
+    <script src="lib/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="script.js?v=20260126d"></script>
+</body>
+
+</html>
