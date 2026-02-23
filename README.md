@@ -9,7 +9,7 @@
 ## สถาปัตยกรรมภาพรวม
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph userSide [User Side]
         UF["User Frontend :80"]
         UB["User Backend :3001"]
@@ -71,7 +71,7 @@ flowchart LR
 
 **Admin Backend** (port 3002) -- Express API สำหรับ Admin Frontend เชื่อมต่อ PostgreSQL ผ่าน Kong และ forward งานอัปโหลดไปยัง RAG Upload
 
-**RAG Upload** (port 8001) -- Python FastAPI service ที่รับไฟล์ (PDF, DOCX, XLSX) แปลงเป็นข้อความ ตัดเป็น chunk สร้าง embedding vector แล้วเก็บลง PostgreSQL (pgvector) เพื่อให้ AI Agent ค้นหาได้
+**RAG Upload** (port 8001) -- Python FastAPI service ที่รับไฟล์ (PDF, DOCX, XLSX, PPTX, รูปภาพ) แปลงเป็นข้อความด้วย Docling/PyMuPDF/vision OCR ตัดเป็น chunk สร้าง embedding vector แล้วเก็บลง PostgreSQL (pgvector) เพื่อให้ AI Agent ค้นหาได้
 
 **PostgreSQL + pgvector** (port 5432) -- ฐานข้อมูลหลักเก็บข้อมูลผู้ใช้ เอกสาร และ embedding vector สำหรับ similarity search
 
@@ -124,9 +124,11 @@ sequenceDiagram
 | ตัวแปรใน `.env` | บทบาท | ลักษณะงาน | ความต้องการ context |
 |---|---|---|---|
 | `OLLAMA_CHAT_MODEL` | ตอบแชท | รับ system prompt ยาว + RAG 15 เอกสาร + ประวัติสนทนา + JSON schema → สร้างคำตอบ | สูงมาก (>= 60,000 tokens) |
-| `OLLAMA_EMBED_MODEL` | สร้าง vector | แปลงข้อความสั้นเป็น embedding vector สำหรับค้นหา | ต่ำ |
-| `OLLAMA_TAGGING_MODEL` | จัดหมวดหมู่ | วิเคราะห์เนื้อหาเอกสารสั้น ๆ เพื่อติด tag | ต่ำ |
-| `OLLAMA_VISION_MODEL` | อ่านรูปภาพ | วิเคราะห์รูปในเอกสาร เช่น ตาราง แผนผัง | ต่ำ |
+| `OLLAMA_EMBED_MODEL` | สร้าง vector | แปลงข้อความสั้นเป็น embedding vector สำหรับค้นหา (RAG pipeline + AI Agent ใช้ร่วมกัน) | ต่ำ |
+| `OLLAMA_TAGGING_MODEL` | จัดหมวดหมู่ | วิเคราะห์เนื้อหาเอกสารสั้น ๆ เพื่อติด tag ตอนอัปโหลด | ต่ำ |
+| `OLLAMA_VISION_MODEL` | อ่านรูปภาพ | วิเคราะห์รูปในเอกสาร เช่น ตาราง แผนผัง (OCR) | ต่ำ |
+
+**หมายเหตุ RAG:** Embedding model ต้องสร้าง vector ขนาดเดียวกับที่เก็บใน pgvector (เช่น `qwen3-embedding:0.6b` → 1024 มิติ) ถ้าเปลี่ยนโมเดลต้อง re-embed เอกสารทั้งหมด
 
 ### ทำไม Chat Model ต้อง context ใหญ่
 
@@ -159,15 +161,76 @@ sequenceDiagram
 
 ### โมเดลที่ใช้เป็น Chat Model ได้
 
-โมเดลเหล่านี้มี context window >= 60,000 tokens, เก่ง structured JSON output, และรองรับภาษาไทย:
+โมเดลเหล่านี้มี context window >= 60,000 tokens, เก่ง structured JSON output, และรองรับภาษาไทย
 
-| โมเดล | ขนาด | จุดเด่น |
+**ความต้องการของ Chat Model:**
+- Context window >= 60,000 tokens (โค้ดตั้ง `numCtx: 60000`)
+- สร้าง structured JSON ได้ตาม schema (ใช้ prompt + `format: "json"` ไม่ใช่ tool calling)
+- รองรับภาษาไทย (สำหรับตอบคำถามลูกค้า)
+- **ไม่จำเป็นต้องรองรับ tools/function calling** — ระบบใช้ prompt engineering + JSON schema validation
+
+**ประเภทโมเดล:**
+- **Local** = รันบน Ollama ในเครื่อง/container (เช่น `gpt-oss:20b`) — ต้องมี GPU/VRAM ตามตาราง
+- **Cloud** = เรียก API ภายนอก (เช่น `gpt-oss:20b-cloud`) — ต้อง `ollama signin` และใช้ได้เมื่อมีเครือข่าย
+
+| โมเดล | ขนาด | ประเภท | จุดเด่น |
+|---|---|---|---|
+| `gpt-oss:20b` | 20B | Local | รันบน Ollama ได้ปกติ, context ใหญ่พอ, เก่ง JSON |
+| `gpt-oss:20b-cloud` | 20B | Cloud | context ใหญ่พอ, เก่ง JSON, สมดุลระหว่างความเร็วกับความแม่นยำ |
+| `qwen3-next:80b-cloud` | 80B | Cloud | แม่นยำที่สุด, เก่งภาษาไทยมาก แต่ช้ากว่าและใช้ทรัพยากรสูง |
+| `deepseek-r1:14b` | 14B | Local | context 128K, ดีกับ code/JSON, ตอบเร็ว |
+| `nemotron-3-nano:30b-cloud` | 30B | Cloud | เก่งในการทำตามคำสั่งซับซ้อน |
+| `ministral-3:3b` | 3B | Local | context 256K, เบาที่สุด, รันบน Ollama ได้ |
+| `ministral-3:3b-cloud` | 3B | Cloud | context 256K, เบาที่สุด, เรียกผ่าน Cloud API |
+
+### VRAM ขั้นต่ำและโมเดลแนะนำ
+
+| โมเดล | ขนาด | Context | VRAM ขั้นต่ำ | ประเภท | จุดเด่น |
+|---|---|---|---|---|---|
+| `ministral-3:3b` | 3B | 256K | ~4 GB | Local | เบาที่สุด, รันได้บน GPU 8GB |
+| `ministral-3:3b-cloud` | 3B | 256K | - | Cloud | เบาที่สุด, เรียกผ่าน Cloud API |
+| `gpt-oss:20b` | 20B | 60K+ | ~16-24 GB | Local | context ใหญ่พอ, เก่ง JSON |
+| `gpt-oss:20b-cloud` | 20B | 60K+ | - | Cloud | สมดุลความเร็ว-ความแม่นยำ |
+| `deepseek-r1:14b` | 14B | 128K | ~10-12 GB | Local | ดีกับ code/JSON, ตอบเร็ว |
+| `qwen3-next:80b-cloud` | 80B | 60K+ | - | Cloud | แม่นยำที่สุด, เก่งภาษาไทย |
+| `nemotron-3-nano:30b-cloud` | 30B | 60K+ | - | Cloud | เก่งทำตามคำสั่งซับซ้อน |
+| `llama3.1:8b` | 8B | 128K | ~6-8 GB | Local | เร็ว, รองรับภาษาไทย (Llama 3.3 ไม่มี 8B) |
+| `llama3.3:70b` | 70B | 128K | ~48 GB | Local | ใกล้ GPT-4 |
+| `qwen2.5:7b` | 7B | 32K | ~6 GB | Local | หลายภาษา, เก่ง code |
+| `qwen2.5:14b` | 14B | 32K | ~10 GB | Local | สมดุลคุณภาพ-ความเร็ว |
+| `qwen2.5:32b` | 32B | 32K | ~20 GB | Local | แม่นยำขึ้น |
+| `mistral:7b` | 7B | 32K | ~6 GB | Local | เร็วมาก (~24 tok/s) |
+| `phi4:14b` | 14B | 16K | ~12 GB | Local | เก่ง creative writing |
+| `gemma2:9b` | 9B | 8K | ~8 GB | Local | reasoning ดี (context เล็ก) |
+| `deepseek-r1:8b` | 8B | 128K | ~8 GB | Local | reasoning ใกล้ GPT-4 |
+| `supachai/openthaigpt-1.0.0-chat` | 7B | 4K | ~6 GB | Local | ภาษาไทยโดยเฉพาะ, community model (context เล็ก) |
+
+หมายเหตุ: ตัวเลข VRAM เป็นค่าประมาณสำหรับ Q4/Q4_K_M; context 60K อาจใช้ KV cache เพิ่ม ~2-5 GB; โมเดลที่ context < 60K อาจใช้ไม่ได้ (ดู "ทำไม Chat Model ต้อง context ใหญ่"); ตรวจสอบโมเดลที่มีจริงที่ [ollama.com/library](https://ollama.com/library)
+
+### ทำไม ministral-3:3b และ ministral-3:3b-cloud ใช้ได้ทั้งคู่
+
+- โมเดลเดียวกัน แค่ช่องทางต่างกัน: Local (Ollama) vs Cloud API
+- Context window ~256,000 tokens (256K) มากกว่า 60K ที่ระบบต้องการ
+- โมเดล 3B แต่มี context ใหญ่ จึงเหมาะกับ prompt ยาวและ structured JSON
+
+### โมเดลที่ไม่ควรใช้เป็น Chat Model
+
+- **`qwen3:0.6b`** — context window เล็ก (~2K-8K), โค้ดตั้ง `numCtx: 60000` ทำให้เกิดปัญหา: โมเดลเล็กทำ structured JSON ได้ไม่ดี, อาจ timeout หรือ `fetch failed`, Ollama อาจ unload โมเดลบ่อย
+- **`gemma3:4b-cloud`** — context window เล็กเกินไป (ดูหัวข้อ "ทำไม gemma3:4b-cloud ใช้เป็น Chat Model ไม่ได้" ด้านบน)
+
+### โครงสร้าง Output ที่ Chat Model ต้องสร้าง
+
+ระบบใช้ `generateStructuredResponse()` ใน `ai_service.js` บังคับให้โมเดลตอบเป็น JSON ตาม schema นี้:
+
+| ฟิลด์ | ประเภท | คำอธิบาย |
 |---|---|---|
-| `gpt-oss:20b-cloud` | 20B | context ใหญ่พอ, เก่ง JSON, สมดุลระหว่างความเร็วกับความแม่นยำ |
-| `qwen3-next:80b-cloud` | 80B | แม่นยำที่สุด, เก่งภาษาไทยมาก แต่ช้ากว่าและใช้ทรัพยากรสูง |
-| `deepseek-v3.5:14b` | 14B | context >= 64K, ดีกับ code/JSON, ตอบเร็ว |
-| `nemotron-3-nano:30b-cloud` | 30B | เก่งในการทำตามคำสั่งซับซ้อน |
-| `ministral-3:3b-cloud` | 3B | เบาที่สุด, cloud version มี context พอสำหรับงานนี้ |
+| `answers` | string[] | รายการคำตอบแยกตามหัวข้อ |
+| `question` | string | คำถามปิดท้าย (ถ้ามี) |
+| `action` | string | `none` / `reset_password` / `ms_form` — ระบบอ่านค่านี้แล้วส่งไป worker ที่ตรงกัน (`reset_password` = ลิงก์ reset รหัสผ่าน, `ms_form` = แบบฟอร์ม Microsoft) |
+| `thinking_process` | string \| null | เหตุผลการคิด (ถ้ามี) |
+| `image_urls` | string[] | URL รูปภาพ (ถ้ามี) |
+
+**การทำงาน:** ระบบส่ง schema เป็นข้อความใน prompt + ใช้ `format: "json"` ของ Ollama เพื่อบังคับ output เป็น JSON ไม่ได้ใช้ tool/function calling ของโมเดล
 
 ### ตั้งค่าใน `.env`
 
@@ -177,6 +240,8 @@ OLLAMA_EMBED_MODEL=qwen3-embedding:0.6b     # สร้าง vector 1024 มิ
 OLLAMA_TAGGING_MODEL=gemma3:4b-cloud        # งานสั้น ใช้โมเดลเล็กได้
 OLLAMA_VISION_MODEL=gemma3:4b-cloud         # อ่านรูป ใช้โมเดลเล็กได้
 ```
+
+**คำสั่ง pull โมเดล (Local):** `ollama pull <model>` เช่น `ollama pull gpt-oss:20b` หรือ `ollama pull ministral-3:3b`
 
 ---
 
@@ -219,6 +284,8 @@ OLLAMA_VISION_MODEL=gemma3:4b-cloud         # อ่านรูป ใช้โ
 
 ## Quick Start
 
+**Prerequisites:** Docker + Docker Compose, NVIDIA GPU (ถ้าใช้ Local models) หรือเครือข่ายสำหรับ Cloud models
+
 ```bash
 # 1. สร้าง .env จากตัวอย่าง
 cp .env.example .env
@@ -227,10 +294,17 @@ cp .env.example .env
 #    POSTGRES_PASSWORD, JWT_SECRET, ANON_KEY, SERVICE_ROLE_KEY,
 #    REDIS_PASSWORD, MONGO_ROOT_PASSWORD
 
-# 3. รันทั้งระบบ (compose จะสร้าง network และ volume ให้อัตโนมัติ)
+# 3. (ถ้าใช้ Cloud models) ลงชื่อเข้าใช้ Ollama: ollama signin
+
+# 4. รันทั้งระบบ (compose จะสร้าง network และ volume ให้อัตโนมัติ)
 docker compose up -d
 
-# 4. ตรวจสถานะ (ทุก service ต้องเป็น healthy)
+# 5. (ถ้าใช้ Local models) pull โมเดลก่อนใช้งานครั้งแรก
+#    docker exec -it ollama ollama pull gpt-oss:20b
+#    docker exec -it ollama ollama pull qwen3-embedding:0.6b
+#    docker exec -it ollama ollama pull gemma3:4b-cloud
+
+# 6. ตรวจสถานะ (ทุก service ต้องเป็น healthy)
 docker compose ps
 ```
 
@@ -317,6 +391,9 @@ docker compose up -d user-backend
 **prompt too long; exceeded max context length**
 → โมเดลที่ตั้งเป็น `OLLAMA_CHAT_MODEL` มี context window เล็กเกินไป เปลี่ยนเป็นโมเดลที่รองรับ >= 60K tokens (ดูตารางในหัวข้อ AI Model Configuration)
 
+**Structured Generation Error: fetch failed / timeout**
+→ ตรวจว่าใช้โมเดลที่รองรับ context >= 60K และไม่ใช่โมเดลเล็กเช่น `qwen3:0.6b` (ดูหัวข้อ "โมเดลที่ไม่ควรใช้เป็น Chat Model") ตรวจ `OLLAMA_BASE_URL` ว่าเชื่อมต่อได้ และดู log ของ Ollama ว่ามี OOM หรือ crash หรือไม่
+
 **Port ชนกัน**
 → แก้ค่า port ใน `.env` แล้วรัน `docker compose down && docker compose up -d`
 
@@ -325,6 +402,12 @@ docker compose up -d user-backend
 
 **Database connection refused**
 → รอ healthcheck ผ่านก่อน และตรวจ credentials ให้ตรงกัน
+
+**โมเดลไม่มีใน Ollama / model not found**
+→ ตรวจรายชื่อโมเดลที่มีจริงที่ [ollama.com/library](https://ollama.com/library) บางโมเดลอาจใช้ชื่อต่างจากเอกสาร (เช่น `llama3.3:70b` อาจไม่มี ใช้ `llama3.1:70b` แทน)
+
+**Cloud model ไม่ทำงาน / 401 Unauthorized**
+→ รัน `ollama signin` ในเครื่องที่รัน Ollama (หรือ `docker exec -it ollama ollama signin` ถ้า Ollama อยู่ใน container)
 
 ---
 
