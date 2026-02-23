@@ -160,7 +160,7 @@ transforms:
 
       parsed, err = parse_regex(.event_message, r'.*(?P<level>INFO|NOTICE|WARNING|ERROR|LOG|FATAL|PANIC?):.*', numeric_groups: true)
 
-      if err == null || parsed == null {
+      if err != null || parsed == null {
         .metadata.parsed.error_severity = "info"
       }
       if parsed.level != null {

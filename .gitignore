@@ -18,6 +18,8 @@ build/
 .next/
 out/
 
+supabase
+
 # Environment variables
 .env
 .env.local
