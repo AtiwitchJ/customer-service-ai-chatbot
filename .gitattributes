@@ -1,0 +1,3 @@
+# Force LF for scripts that run in Linux containers
+*.exs text eol=lf
+*.sh text eol=lf

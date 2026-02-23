@@ -518,6 +518,41 @@ docker compose up -d user-backend
 **Database connection refused**
 → รอ healthcheck ผ่านก่อน และตรวจ credentials ให้ตรงกัน
 
+**`password authentication failed for user "authenticator"` / latta-supabase-rest unhealthy**
+→ รหัสผ่านใน PostgreSQL ไม่ตรงกับ `.env` (มักเกิดเมื่อ volume เดิมยังอยู่หลังเปลี่ยนรหัสผ่าน)
+
+**วิธีแก้:**
+```bash
+# วิธี 1: รีเซ็ตฐานข้อมูล (ข้อมูลจะหาย)
+docker compose down -v
+docker volume rm latta-csbot-unified_postgres_data 2>$null
+cp .env.example .env
+./latta-csbot-database/utils/generate-keys.sh   # ต้องมี openssl (Git Bash/WSL)
+docker compose up -d
+
+# วิธี 2: Sync รหัสผ่าน (ใช้ Git Bash หรือ WSL)
+./latta-csbot-database/utils/db-passwd.sh
+docker compose up -d --force-recreate rest storage
+```
+
+**`Role "supabase_admin" does not exist` / latta-supabase-db unhealthy**
+→ โปรเจกต์นี้มี `00-initial-schema.sql` แล้ว ตรวจสอบว่า volume เก่าถูกลบแล้วเริ่มใหม่ (ดูวิธีแก้ด้านล่าง)
+
+**`must be owner of function uid` / latta-supabase-auth crash loop**
+→ Auth schema มีฟังก์ชัน `auth.uid()` ที่ถูกสร้างโดย role อื่น (มักเกิดจาก volume เดิมหรือ init ไม่สมบูรณ์)
+
+**`no schema has been selected to create in` / latta-supabase-realtime crash loop**
+→ Realtime ไม่พบ schema `_realtime` หรือ search_path ไม่ถูกต้อง (มักเกิดจาก volume เดิม)
+
+**วิธีแก้ทั้ง Auth และ Realtime:** รีเซ็ตฐานข้อมูลแบบเต็ม (ข้อมูลจะหายทั้งหมด)
+```bash
+docker compose down -v
+docker volume rm latta-csbot-unified_postgres_data 2>$null
+# ถ้าใช้ docker-compose.dev.yml: docker compose -f docker-compose.yml -f docker-compose.dev.yml down -v
+./latta-csbot-database/reset.sh -y   # หรือรัน reset.sh แล้วกด y
+docker compose up -d
+```
+
 **โมเดลไม่มีใน Ollama / model not found**
 → ตรวจรายชื่อโมเดลที่มีจริงที่ [ollama.com/library](https://ollama.com/library) บางโมเดลอาจใช้ชื่อต่างจากเอกสาร (เช่น `llama3.3:70b` อาจไม่มี ใช้ `llama3.1:70b` แทน)
 

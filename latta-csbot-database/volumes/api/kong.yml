@@ -27,8 +27,8 @@ acls:
 ###
 basicauth_credentials:
   - consumer: DASHBOARD
-    username: $DASHBOARD_USERNAME
-    password: $DASHBOARD_PASSWORD
+    username: '$DASHBOARD_USERNAME'
+    password: '$DASHBOARD_PASSWORD'
 
 ###
 ### API Routes
@@ -134,7 +134,7 @@ services:
   ## Secure Realtime routes
   - name: realtime-v1-ws
     _comment: 'Realtime: /realtime/v1/* -> ws://realtime:4000/socket/*'
-    url: http://realtime:4000/socket
+    url: http://realtime-dev.supabase-realtime:4000/socket
     protocol: ws
     routes:
       - name: realtime-v1-ws
@@ -154,7 +154,7 @@ services:
             - anon
   - name: realtime-v1-rest
     _comment: 'Realtime: /realtime/v1/* -> ws://realtime:4000/socket/*'
-    url: http://realtime:4000/api
+    url: http://realtime-dev.supabase-realtime:4000/api
     protocol: http
     routes:
       - name: realtime-v1-rest
@@ -196,16 +196,6 @@ services:
     plugins:
       - name: cors
 
-  ## Analytics routes
-  - name: analytics-v1
-    _comment: 'Analytics: /analytics/v1/* -> http://logflare:4000/*'
-    url: http://analytics:4000/
-    routes:
-      - name: analytics-v1-all
-        strip_path: true
-        paths:
-          - /analytics/v1/
-
   ## Secure Database routes
   - name: meta
     _comment: 'pg-meta: /pg/* -> http://pg-meta:8080/*'
@@ -224,37 +214,6 @@ services:
           hide_groups_header: true
           allow:
             - admin
-
-  ## Block access to /api/mcp
-  - name: mcp-blocker
-    _comment: 'Block direct access to /api/mcp'
-    url: http://studio:3000/api/mcp
-    routes:
-      - name: mcp-blocker-route
-        strip_path: true
-        paths:
-          - /api/mcp
-    plugins:
-      - name: request-termination
-        config:
-          status_code: 403
-          message: "Access is forbidden."
-
-  ## MCP endpoint - local access
-  - name: mcp
-    _comment: 'MCP: /mcp -> http://studio:3000/api/mcp (local access)'
-    url: http://studio:3000/api/mcp
-    routes:
-      - name: mcp
-        strip_path: true
-        paths:
-          - /mcp
-    plugins:
-      # Block access to /mcp by default
-      - name: request-termination
-        config:
-          status_code: 403
-          message: "Access is forbidden."
 
   ## Protected Dashboard - catch all remaining routes
   - name: dashboard

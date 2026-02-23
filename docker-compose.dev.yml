@@ -340,15 +340,18 @@ services:
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - ./latta-csbot-database/volumes/db/realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql
-      - ./latta-csbot-database/volumes/db/webhooks.sql:/docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql
-      - ./latta-csbot-database/volumes/db/roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql
-      - ./latta-csbot-database/volumes/db/jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql
-      - ./base/database_lc.sql:/docker-entrypoint-initdb.d/init-scripts/100-database_lc.sql:ro
+      # Must be at ROOT - postgres only runs scripts in root, not subdirs
+      # Named without leading zeros to ensure correct sorting
+      - ./latta-csbot-database/volumes/db/00-initial-schema.sql:/docker-entrypoint-initdb.d/a0-initial-schema.sql
+      - ./latta-csbot-database/volumes/db/_supabase.sql:/docker-entrypoint-initdb.d/a1-supabase.sql
+      - ./latta-csbot-database/volumes/db/realtime.sql:/docker-entrypoint-initdb.d/b2-realtime.sql
+      - ./latta-csbot-database/volumes/db/logs.sql:/docker-entrypoint-initdb.d/b3-logs.sql
+      - ./latta-csbot-database/volumes/db/pooler.sql:/docker-entrypoint-initdb.d/b4-pooler.sql
+      - ./latta-csbot-database/volumes/db/webhooks.sql:/docker-entrypoint-initdb.d/b5-webhooks.sql
+      - ./latta-csbot-database/volumes/db/roles.sql:/docker-entrypoint-initdb.d/b6-roles.sql
+      - ./latta-csbot-database/volumes/db/jwt.sql:/docker-entrypoint-initdb.d/b7-jwt.sql
+      - ./base/database_lc.sql:/docker-entrypoint-initdb.d/b8-database_lc.sql:ro
       - ./latta-csbot-database/volumes/db/data:/var/lib/postgresql/data
-      - ./latta-csbot-database/volumes/db/_supabase.sql:/docker-entrypoint-initdb.d/migrations/97-_supabase.sql
-      - ./latta-csbot-database/volumes/db/logs.sql:/docker-entrypoint-initdb.d/migrations/99-logs.sql
-      - ./latta-csbot-database/volumes/db/pooler.sql:/docker-entrypoint-initdb.d/migrations/99-pooler.sql
       - ./latta-csbot-database/volumes/db/config:/etc/postgresql-custom
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres -h localhost -d ${POSTGRES_DB:-postgres} && psql -U postgres -d ${POSTGRES_DB:-postgres} -tAc \"select case when to_regclass('public.files') is not null and to_regclass('public.documents') is not null and to_regclass('public.document_chunks') is not null then 1 else 0 end\" | grep -q 1" ]
