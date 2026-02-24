@@ -5,7 +5,7 @@
 # ===========================================
 # BUILD STAGE
 # ===========================================
-FROM node:20-slim AS build
+FROM node:22-slim AS build
 
 WORKDIR /app
 
@@ -25,7 +25,7 @@ RUN npm run build -- --configuration=production
 # ===========================================
 # PRODUCTION STAGE (Nginx)
 # ===========================================
-FROM nginx:alpine AS production
+FROM nginx:1.28.2-alpine AS production
 
 COPY --from=build /app/nginx.conf /etc/nginx/conf.d/default.conf
 

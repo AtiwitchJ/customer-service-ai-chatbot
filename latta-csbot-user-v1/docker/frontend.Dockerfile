@@ -1,4 +1,4 @@
-FROM nginx:alpine
+FROM nginx:1.28.2-alpine
 
 # Copy frontend files
 COPY frontend/ /usr/share/nginx/html/

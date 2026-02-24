@@ -18,7 +18,7 @@ services:
   # ==========================================
   ollama:
     container_name: latta-ollama
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.17.0
     restart: unless-stopped
     ports:
       - "${OLLAMA_PORT:-11434}:11434"
@@ -36,7 +36,7 @@ services:
   # ==========================================
   mongodb:
     container_name: latta-mongodb
-    image: mongo:latest
+    image: mongo:8.2
     restart: unless-stopped
     ports:
       - "${MONGO_PORT:-27017}:27017"
@@ -60,7 +60,7 @@ services:
   # ==========================================
   redis:
     container_name: latta-redis
-    image: redis/redis-stack:latest
+    image: redis/redis-stack:7.4.0-v8
     restart: unless-stopped
     ports:
       - "${REDIS_PORT:-6379}:6379"
