@@ -53,3 +53,38 @@ htmlcov/
 *.bak
 *.tmp
 .cache/
+
+# ===========================================
+# Docker & Container
+# ===========================================
+# Local docker compose overrides (use for local development only)
+docker-compose.override.yml
+
+# Docker volumes (large data, don't commit)
+volumes/
+*/volumes/
+**/volumes/*
+
+# Ollama models (can be very large)
+ollama_data/
+.ollama/
+
+# Supabase / Database
+.latta-csbot-database/volumes/db/data/
+.latta-csbot-database/volumes/storage/
+
+# Redis data
+redis_data/
+
+# MongoDB data
+mongo_data/
+
+# Cache from services
+admin-backend-cache/
+admin-dashboard-cache/
+admin-json-data/
+deno-cache/
+db-config/
+
+# Healthcheck & temp
+*.pid
