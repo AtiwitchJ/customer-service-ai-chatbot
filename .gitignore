@@ -64,7 +64,9 @@ ollama_data/
 
 # Supabase / Database
 .latta-csbot-database/volumes/db/data/
+latta-csbot-database/volumes/db/data/
 .latta-csbot-database/volumes/storage/
+latta-csbot-database/volumes/logs/
 
 # Redis data
 redis_data/
