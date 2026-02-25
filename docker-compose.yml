@@ -541,7 +541,8 @@ services:
       start_period: 10s
     environment:
       PORT: 4000
-      DB_HOST: ${POSTGRES_HOST}
+      # Use service name so DNS resolves inside the container (avoids "Failed to detect IP version for DB_HOST: nxdomain")
+      DB_HOST: ${POSTGRES_HOST:-db}
       DB_PORT: ${POSTGRES_PORT}
       DB_USER: supabase_admin
       DB_PASSWORD: ${POSTGRES_PASSWORD}
@@ -744,9 +745,8 @@ services:
     container_name: supabase-db
     image: supabase/postgres:15.8.1.085
     restart: unless-stopped
-    # ports:
-    #   - 5433:5432
-      # - ${POOLER_PROXY_PORT_TRANSACTION}:6543
+    ports:
+      - 5433:5432
     volumes:
       - ./latta-csbot-database/volumes/db/realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql:Z
       # Must be superuser to create event trigger
