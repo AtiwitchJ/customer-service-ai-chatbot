@@ -620,7 +620,7 @@ services:
       S3_PROTOCOL_ACCESS_KEY_ID: ${S3_PROTOCOL_ACCESS_KEY_ID}
       S3_PROTOCOL_ACCESS_KEY_SECRET: ${S3_PROTOCOL_ACCESS_KEY_SECRET}
     volumes:
-      - ./latta-csbot-database/volumes/storage:/var/lib/storage:z
+      - supabase-storage-data:/var/lib/storage:z
     networks:
       - latta-network
 
@@ -629,7 +629,7 @@ services:
     image: darthsim/imgproxy:v3.30.1
     restart: unless-stopped
     volumes:
-      - ./latta-csbot-database/volumes/storage:/var/lib/storage:z
+      - supabase-storage-data:/var/lib/storage:z
     healthcheck:
       test:
         [
@@ -914,6 +914,7 @@ volumes:
   admin-backend-cache:
   admin-dashboard-cache:
   admin-json-data:
+  supabase-storage-data:
 
   db-config:
   db_data:
