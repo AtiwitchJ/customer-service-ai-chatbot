@@ -57,6 +57,12 @@ docker-compose.override.yml
 volumes/
 */volumes/
 **/volumes/*
+# Exception: allow vector.yml to be committed (must follow volume rules)
+!latta-csbot-database/volumes/
+latta-csbot-database/volumes/*
+!latta-csbot-database/volumes/logs/
+latta-csbot-database/volumes/logs/*
+!latta-csbot-database/volumes/logs/vector.yml
 
 # Ollama models (can be very large)
 ollama_data/
@@ -64,9 +70,8 @@ ollama_data/
 
 # Supabase / Database
 .latta-csbot-database/volumes/db/data/
-latta-csbot-database/volumes/db/data/
+# latta-csbot-database/volumes/db/data/
 .latta-csbot-database/volumes/storage/
-latta-csbot-database/volumes/logs/
 
 # Redis data
 redis_data/
