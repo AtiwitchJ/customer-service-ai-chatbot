@@ -770,6 +770,79 @@ latta-csbot-database/
 | POST | `/upload/multiple` | อัปโหลดหลายไฟล์พร้อมกัน |
 | GET | `/health` | health check |
 
+### AI Agent (port 8765 -- Node.js Express + BullMQ)
+
+**Express Server Endpoints**
+
+| Method | Path | Auth | Request Body | Response | หมายเหตุ |
+|---|---|---|---|---|---|
+| GET | `/health` | ไม่ | - | `{ status, timestamp }` | Health check |
+| POST | `/agent` | ไม่ | `{ sessionId, text }` | `{ status: 'processing', sessionId }` | รับข้อความ → ประมวลผลใน background |
+
+**BullMQ Workers (Queue Processing)**
+
+| Worker | Queue Name | Env Variable | หน้าที่ |
+|---|---|---|---|
+| Main Worker | `ai-agent-queue` | `AI_AGENT_QUEUE_NAME` | ประมวลผลแชทหลัก (RAG + LLM) → ส่งคำตอบผ่าน webhook |
+| MS Form Worker | `ms_form` | `MS_FORM_QUEUE_NAME` | สร้างลิงก์แบบฟอร์ม MS Forms → ส่งให้ผู้ใช้ |
+| Reset Password Worker | `reset_password` | `RESET_PASSWORD_QUEUE_NAME` | รีเซ็ตรหัสผ่าน → ส่งลิงก์ยืนยันทางอีเมล |
+
+**Queue Job Data Structure**
+
+```javascript
+// Main Worker (ai-agent-queue)
+{
+  sessionId: "xxx",
+  text: "ข้อความจากผู้ใช้"
+}
+
+// MS Form Worker (ms_form)
+{
+  sessionId: "xxx"
+}
+
+// Reset Password Worker (reset_password)
+{
+  sessionId: "xxx"
+}
+```
+
+**Environment Variables**
+
+| Variable | Default | หมายเหตุ |
+|---|---|---|
+| `AI_AGENT_PORT` | 8765 | Port ของ Express server |
+| `AI_AGENT_QUEUE_NAME` | ai-agent-queue | ชื่อ queue หลัก |
+| `MS_FORM_QUEUE_NAME` | ms_form | ชื่อ queue สำหรับ MS Forms |
+| `RESET_PASSWORD_QUEUE_NAME` | reset_password | ชื่อ queue สำหรับรีเซ็ตรหัสผ่าน |
+| `AGENT_WEBHOOK_URL` | - | URL ที่ Main Worker จะ forward งานไป |
+| `API_BASE` | - | URL ของ User Backend (สำหรับ webhook reply) |
+| `REDIS_HOST` | - | Redis host |
+| `REDIS_PORT` | 6379 | Redis port |
+| `REDIS_PASSWORD` | - | Redis password |
+| `REDIS_QUEUE_DB` | 2 | Redis DB สำหรับ queue |
+| `REDIS_VERIFY_DB` | 3 | Redis DB สำหรับข้อมูลผู้ใช้ที่ยืนยันแล้ว |
+| `REDIS_COOLDOWN_DB` | 4 | Redis DB สำหรับ spam prevention |
+
+**Flow การทำงาน**
+
+```
+User → User Backend (/webhook/send) → BullMQ Queue (ai-agent-queue) 
+                                                        ↓
+                                            Main Worker ประมวลผล
+                                                        ↓
+                                            (RAG → LLM → Generate Reply)
+                                                        ↓
+                                            Webhook → User Backend 
+                                                        ↓
+                                            WebSocket → Frontend
+```
+
+**Spam Prevention**
+
+- MS Form Worker: ใช้ cooldown 5 นาที หลังส่ง link
+- Reset Password Worker: ใช้ cooldown 5 นาที หลังส่งลิงก์ reset
+
 ---
 
 ## ฟังก์ชันสำคัญ

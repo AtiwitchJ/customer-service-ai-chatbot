@@ -12,6 +12,10 @@
 
 name: latta-csbot-dev
 
+# Docker Hub authentication to increase rate limit
+# Run: docker login -u your_username before running compose
+# Or set up credentials in ~/.docker/config.json
+
 services:
   # ==========================================
   # LLM Service - Ollama
@@ -235,6 +239,9 @@ services:
       - REDIS_CHAT_DB=${REDIS_CHAT_DB}
       - REDIS_VERIFY_DB=${REDIS_VERIFY_DB}
       - REDIS_QUEUE_DB=${REDIS_QUEUE_DB}
+      - REDIS_MEMORY_DB=${REDIS_MEMORY_DB}
+      - REDIS_SESSION_TTL=${REDIS_SESSION_TTL}
+      - REDIS_CHAT_HISTORY_LIMIT=${REDIS_CHAT_HISTORY_LIMIT}
       - AGENT_WEBHOOK_URL=${AGENT_WEBHOOK_URL}
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL}
       - AI_AGENT_QUEUE_NAME=${AI_AGENT_QUEUE_NAME}
@@ -244,7 +251,6 @@ services:
       - BLOCK_DURATION_MS=${BLOCK_DURATION_MS}
       - CHAT_RATE_LIMIT_WINDOW_MS=60000
       - CHAT_RATE_LIMIT_MAX=60
-      - REDIS_SESSION_TTL=${REDIS_SESSION_TTL}
       - EXTERNAL_AUTH_API=${EXTERNAL_AUTH_API}
       - AUTH_BYPASS_MODE=${AUTH_BYPASS_MODE}
     volumes:
