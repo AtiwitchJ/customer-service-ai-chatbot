@@ -744,8 +744,8 @@ services:
     container_name: supabase-db
     image: supabase/postgres:15.8.1.085
     restart: unless-stopped
-    ports:
-      - 5433:5432
+    # ports:
+    #   - 5433:5432
       # - ${POOLER_PROXY_PORT_TRANSACTION}:6543
     volumes:
       - ./latta-csbot-database/volumes/db/realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql:Z
@@ -755,8 +755,8 @@ services:
       - ./latta-csbot-database/volumes/db/roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:Z
       # Initialize the database settings with JWT_SECRET and JWT_EXP
       - ./latta-csbot-database/volumes/db/jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql:Z
-      # PGDATA directory is persisted between restarts
-      - ./latta-csbot-database/volumes/db/data:/var/lib/postgresql/data:Z
+      # PGDATA: use named volume to avoid corrupt data dir (e.g. missing pg_notify)
+      - db_data:/var/lib/postgresql/data
       # Changes required for internal supabase data such as _analytics
       - ./latta-csbot-database/volumes/db/_supabase.sql:/docker-entrypoint-initdb.d/migrations/97-_supabase.sql:Z
       # Changes required for Analytics support
@@ -777,7 +777,8 @@ services:
         ]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 15
+      start_period: 60s
     depends_on:
       vector:
         condition: service_healthy
@@ -909,4 +910,5 @@ volumes:
   admin-json-data:
 
   db-config:
+  db_data:
   deno-cache:
