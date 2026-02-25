@@ -744,6 +744,9 @@ services:
     container_name: supabase-db
     image: supabase/postgres:15.8.1.085
     restart: unless-stopped
+    ports:
+      - 5433:5432
+      # - ${POOLER_PROXY_PORT_TRANSACTION}:6543
     volumes:
       - ./latta-csbot-database/volumes/db/realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql:Z
       # Must be superuser to create event trigger

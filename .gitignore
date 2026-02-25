@@ -70,7 +70,7 @@ ollama_data/
 
 # Supabase / Database
 .latta-csbot-database/volumes/db/data/
-# latta-csbot-database/volumes/db/data/
+latta-csbot-database/volumes/db/data/
 .latta-csbot-database/volumes/storage/
 
 # Redis data
