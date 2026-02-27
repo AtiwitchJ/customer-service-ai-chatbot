@@ -63,6 +63,24 @@ latta-csbot-database/volumes/*
 !latta-csbot-database/volumes/logs/
 latta-csbot-database/volumes/logs/*
 !latta-csbot-database/volumes/logs/vector.yml
+# Exception: allow db config files to be committed
+!latta-csbot-database/volumes/db/
+latta-csbot-database/volumes/db/*
+!latta-csbot-database/volumes/db/data/
+latta-csbot-database/volumes/db/data/*
+!latta-csbot-database/volumes/db/init-scripts/
+latta-csbot-database/volumes/db/init-scripts/*
+!latta-csbot-database/volumes/db/migrations/
+latta-csbot-database/volumes/db/migrations/*
+!latta-csbot-database/volumes/db/pooler/
+latta-csbot-database/volumes/db/pooler/*
+# Exception: allow API and functions to be committed
+!latta-csbot-database/volumes/api/
+latta-csbot-database/volumes/api/*
+!latta-csbot-database/volumes/functions/
+latta-csbot-database/volumes/functions/*
+!latta-csbot-database/volumes/snippets/
+latta-csbot-database/volumes/snippets/*
 
 # Ollama models (can be very large)
 ollama_data/
