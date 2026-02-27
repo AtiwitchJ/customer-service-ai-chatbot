@@ -251,6 +251,8 @@ services:
         condition: service_healthy
       analytics:
         condition: service_healthy
+      rest:
+        condition: service_started
     environment:
       GOTRUE_API_HOST: 0.0.0.0
       GOTRUE_API_PORT: 9999
@@ -389,6 +391,8 @@ services:
         condition: service_started
       imgproxy:
         condition: service_started
+      analytics:
+        condition: service_healthy
     healthcheck:
       test:
         [
@@ -482,6 +486,16 @@ services:
     depends_on:
       analytics:
         condition: service_healthy
+      rest:
+        condition: service_started
+      auth:
+        condition: service_started
+      realtime:
+        condition: service_started
+      meta:
+        condition: service_started
+      storage:
+        condition: service_started
     environment:
       KONG_DATABASE: "off"
       KONG_DECLARATIVE_CONFIG: /home/kong/kong.yml
@@ -515,6 +529,8 @@ services:
     depends_on:
       analytics:
         condition: service_healthy
+      kong:
+        condition: service_started
     environment:
       HOSTNAME: "::"
 
@@ -578,6 +594,22 @@ services:
         condition: service_healthy
       analytics:
         condition: service_healthy
+      kong:
+        condition: service_started
+      auth:
+        condition: service_started
+      rest:
+        condition: service_started
+      realtime:
+        condition: service_started
+      meta:
+        condition: service_started
+      storage:
+        condition: service_started
+      imgproxy:
+        condition: service_started
+      functions:
+        condition: service_started
     environment:
       PORT: 4000
       POSTGRES_PORT: ${POSTGRES_PORT}
@@ -606,24 +638,35 @@ services:
       - latta-network
 
   # ==========================================
-  # Flyway - Database Migration (Custom RAG Schema)
+  # Database Initialization (Custom RAG Schema)
+  # Service #14 - Run after all Supabase services are ready
   # ==========================================
-  flyway:
-    image: flyway/flyway:10.4.1
-    container_name: latta-flyway
+  db-init:
+    image: postgres:15.8-alpine
+    container_name: latta-db-init
+    restart: "no"
     depends_on:
       supavisor:
-        condition: service_started
+        condition: service_healthy
     environment:
-      FLYWAY_URL: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
-      FLYWAY_USER: supabase_admin
-      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD}
-      FLYWAY_LOCATIONS: filesystem:/flyway/sql
-      FLYWAY_BASELINE_ON_MIGRATE: "true"
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: supabase_admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - ./latta-csbot-database/volumes/db/migrations:/flyway/sql:ro
-    command: migrate
-    restart: "no"
+      - ./latta-csbot-database/volumes/db/init-scripts/database_lc.sql:/database_lc.sql:ro
+    command: >
+      sh -c "
+        echo 'Waiting for database to be ready...' &&
+        until PGPASSWORD=$$POSTGRES_PASSWORD psql -h $$POSTGRES_HOST -U $$POSTGRES_USER -d $$POSTGRES_DB -c 'SELECT 1' > /dev/null 2>&1; do
+          echo 'Database is unavailable - sleeping';
+          sleep 2;
+        done;
+        echo 'Database is ready! Running RAG schema initialization...';
+        PGPASSWORD=$$POSTGRES_PASSWORD psql -h $$POSTGRES_HOST -U $$POSTGRES_USER -d $$POSTGRES_DB -f /database_lc.sql;
+        echo 'Database initialization completed!'
+      "
     networks:
       - latta-network
 
@@ -680,6 +723,9 @@ services:
       - latta-network
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
 
   admin-frontend:
     build:
@@ -739,6 +785,9 @@ services:
       - "host.docker.internal:host-gateway"
     networks:
       - latta-network
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
       interval: ${HEALTHCHECK_INTERVAL:-30s}
@@ -803,6 +852,8 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
 
   ai-agent:
     build:

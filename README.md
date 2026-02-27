@@ -701,7 +701,7 @@ latta-csbot-database/
     │   ├── logs.sql                       # สร้าง _analytics schema
     │   ├── pooler.sql                     # สร้าง _supavisor schema
     │   ├── _supabase.sql                  # สร้าง _supabase database
-    │   └── migrations/                     # Flyway migrations สำหรับ RAG schema
+    │   └── init-scripts/                   # SQL scripts สำหรับ RAG schema (database_lc.sql)
     │       └── V1__latta_rag_schema.sql   # Schema สำหรับ RAG (files, documents, document_chunks)
     ├── functions/
     │   ├── main/index.ts                  # Edge function router (JWT verify + dispatch)
@@ -728,30 +728,41 @@ latta-csbot-database/
 
 ### วิธีแก้: ใช้ Flyway
 
-โปรเจกต์นี้ใช้ **Flyway** สำหรับ custom database migrations แทน Docker init scripts:
+โปรเจกต์นี้ใช้ **db-init** (PostgreSQL client) สำหรับ custom database initialization แทน Flyway:
 
 ```yaml
 # docker-compose.yml
-flyway:
-  image: flyway/flyway:10.4.1
+db-init:
+  image: postgres:15.8-alpine
   depends_on:
     supavisor:
-      condition: service_started
+      condition: service_healthy
   environment:
-    FLYWAY_URL: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
-    FLYWAY_USER: supabase_admin
-    FLYWAY_PASSWORD: ${POSTGRES_PASSWORD}
-    FLYWAY_LOCATIONS: filesystem:/flyway/sql
+    POSTGRES_HOST: ${POSTGRES_HOST}
+    POSTGRES_PORT: ${POSTGRES_PORT}
+    POSTGRES_DB: ${POSTGRES_DB}
+    POSTGRES_USER: supabase_admin
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
   volumes:
-    - ./latta-csbot-database/volumes/db/migrations:/flyway/sql:ro
-  command: migrate
+    - ./latta-csbot-database/volumes/db/init-scripts/database_lc.sql:/database_lc.sql:ro
+  command: >
+    sh -c "
+      echo 'Waiting for database to be ready...' &&
+      until PGPASSWORD=$$POSTGRES_PASSWORD psql -h $$POSTGRES_HOST -U $$POSTGRES_USER -d $$POSTGRES_DB -c 'SELECT 1' > /dev/null 2>&1; do
+        echo 'Database is unavailable - sleeping';
+        sleep 2;
+      done;
+      echo 'Database is ready! Running RAG schema initialization...';
+      PGPASSWORD=$$POSTGRES_PASSWORD psql -h $$POSTGRES_HOST -U $$POSTGRES_USER -d $$POSTGRES_DB -f /database_lc.sql;
+      echo 'Database initialization completed!'
+    "
 ```
 
-**ข้อดีของ Flyway:**
+**ข้อดีของ db-init:**
 - ✅ รันหลังจาก Supabase services ทั้งหมดพร้อมแล้ว
-- ✅ ใช้ JDBC connection ที่มี password correctly  
-- ✅ มี version tracking และ migration history
-- ✅ รองรับ repeatable migrations
+- ✅ ใช้ native PostgreSQL client ที่มี password correctly
+- ✅ เรียบง่าย ไม่ต้องตั้งค่า JDBC
+- ✅ รอจน database ready ก่อนรัน SQL
 
 ### ลำดับการเริ่มต้น Services
 
@@ -770,11 +781,11 @@ flyway:
 | 11 | `imgproxy` | - |
 | 12 | `functions` | analytics (healthy) |
 | 13 | `supavisor` | db + analytics (healthy) |
-| **14** | **`flyway`** | **supavisor (started)** |
+| **14** | **`db-init`** | **supavisor (healthy)** |
 
-### RAG Schema (V1__latta_rag_schema.sql)
+### RAG Schema (database_lc.sql)
 
-Flyway รัน migration `V1__latta_rag_schema.sql` ซึ่งสร้าง:
+db-init รัน SQL script `database_lc.sql` ซึ่งสร้าง:
 
 **Extensions:**
 - `uuid-ossp` - UUID generation
