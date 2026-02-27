@@ -109,12 +109,14 @@ services:
       - ./latta-csbot-database/volumes/db/roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:Z
       # Initialize the database settings with JWT_SECRET and JWT_EXP
       - ./latta-csbot-database/volumes/db/jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql:Z
+      # Custom RAG Database Schema
+      - ./latta-csbot-database/volumes/db/database_lc.sql:/docker-entrypoint-initdb.d/init-scripts/99-database_lc.sql:Z
       # PGDATA: use named volume to avoid corrupt data dir (e.g. missing pg_notify)
       - db_data:/var/lib/postgresql/data
       # Changes required for internal supabase data such as _analytics
-      - ./latta-csbot-database/volumes/db/_supabase.sql:/docker-entrypoint-initdb.d/migrations/97-_supabase.sql:Z
-      # Changes required for Analytics support
-      - ./latta-csbot-database/volumes/db/logs.sql:/docker-entrypoint-initdb.d/migrations/99-logs.sql:Z
+      - ./latta-csbot-database/volumes/db/_supabase.sql:/docker-entrypoint-initdb.d/init-scripts/97-_supabase.sql:Z
+      # Changes required for Analytics support (sources & system_metrics tables)
+      - ./latta-csbot-database/volumes/db/logs.sql:/docker-entrypoint-initdb.d/init-scripts/98-logs.sql:Z
       # Changes required for Pooler support
       - ./latta-csbot-database/volumes/db/pooler.sql:/docker-entrypoint-initdb.d/migrations/99-pooler.sql:Z
       # Use named volume to persist pgsodium decryption key between restarts
@@ -606,28 +608,24 @@ services:
       - latta-network
 
   # ==========================================
-  # Flyway - Database Migration
+  # Database Initialization
   # ==========================================
-  flyway:
-    image: flyway/flyway:10.4.1
-    container_name: latta-flyway
+  db-init:
+    image: postgres:15-alpine
+    container_name: latta-db-init
+    restart: "no"
     depends_on:
       db:
         condition: service_healthy
-      supavisor:
-        condition: service_started
     environment:
-      FLYWAY_URL: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
-      FLYWAY_USER: supabase_admin
-      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD}
-      FLYWAY_LOCATIONS: filesystem:/flyway/sql
-      FLYWAY_BASELINE_ON_MIGRATE: "true"
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - ./latta-csbot-database/volumes/db/migrations:/flyway/sql:ro
-    command: migrate
-    restart: "no"
-    networks:
-      - latta-network
+      - ./latta-csbot-database/volumes/db/database_lc.sql:/docker-entrypoint-initdb.d/99-database_lc.sql:ro
+    command: ["true"]
 
   # ==========================================
   # Application Layer
