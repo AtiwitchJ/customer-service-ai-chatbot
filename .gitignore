@@ -8,7 +8,6 @@ __pycache__/
 venv/
 env/
 .venv/
-.env/
 
 # Build outputs
 dist/
@@ -17,11 +16,6 @@ build/
 *.egg
 .next/
 out/
-
-# Environment variables
-.env
-.env.local
-.env.*.local
 
 # IDE
 .idea/
@@ -48,56 +42,70 @@ htmlcov/
 # ===========================================
 # Docker & Container
 # ===========================================
-# Local docker compose overrides (use for local development only)
 docker-compose.override.yml
 
-# Docker volumes (large data, don't commit)
-volumes/
-*/volumes/
-**/volumes/*
-# Exception: allow vector.yml to be committed (must follow volume rules)
+# Data volumes (large, don't commit)
+volumes/db/data
+volumes/storage
+
+# Supabase Docker - allow configs
+!supabase-docker/
+supabase-docker/*
+!supabase-docker/volumes/
+supabase-docker/volumes/*
+!supabase-docker/volumes/db/
+supabase-docker/volumes/db/*
+!supabase-docker/volumes/db/data/
+supabase-docker/volumes/db/data/*
+!supabase-docker/volumes/api/
+supabase-docker/volumes/api/*
+!supabase-docker/volumes/logs/
+supabase-docker/volumes/logs/*
+!supabase-docker/volumes/pooler/
+supabase-docker/volumes/pooler/*
+!supabase-docker/volumes/functions/
+supabase-docker/volumes/functions/*
+!supabase-docker/volumes/snippets/
+supabase-docker/volumes/snippets/*
+
+# Latte-csbot-database - allow configs
+!latte-csbot-database/
+latte-csbot-database/*
 !latte-csbot-database/volumes/
 latte-csbot-database/volumes/*
-!latte-csbot-database/volumes/logs/
-latte-csbot-database/volumes/logs/*
-!latte-csbot-database/volumes/logs/vector.yml
-# Exception: allow db config files to be committed
 !latte-csbot-database/volumes/db/
 latte-csbot-database/volumes/db/*
 !latte-csbot-database/volumes/db/data/
 latte-csbot-database/volumes/db/data/*
 !latte-csbot-database/volumes/db/init-scripts/
 latte-csbot-database/volumes/db/init-scripts/*
-!latte-csbot-database/volumes/db/migrations/
-latte-csbot-database/volumes/db/migrations/*
-!latte-csbot-database/volumes/db/pooler/
-latte-csbot-database/volumes/db/pooler/*
-# Exception: allow API and functions to be committed
 !latte-csbot-database/volumes/api/
 latte-csbot-database/volumes/api/*
+!latte-csbot-database/volumes/logs/
+latte-csbot-database/volumes/logs/*
+!latte-csbot-database/volumes/pooler/
+latte-csbot-database/volumes/pooler/*
 !latte-csbot-database/volumes/functions/
 latte-csbot-database/volumes/functions/*
 !latte-csbot-database/volumes/snippets/
 latte-csbot-database/volumes/snippets/*
 
-# Ollama models (can be very large)
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.example
+
+# Test files
+test.http
+
+# Cache
 ollama_data/
 .ollama/
-
-# Supabase / Database
-
-# Redis data
 redis_data/
-
-# MongoDB data
 mongo_data/
-
-# Cache from services
 admin-backend-cache/
 admin-dashboard-cache/
 admin-json-data/
 deno-cache/
 db-config/
-
-# Healthcheck & temp
-*.pid
