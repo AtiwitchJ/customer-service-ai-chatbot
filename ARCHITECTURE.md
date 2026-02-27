@@ -6,10 +6,10 @@
 
 | โปรเจค | หน้าที่ | พอร์ตหลัก |
 |--------|---------|----------|
-| **latta-csbot-database** | ฐานข้อมูลกลาง (Supabase, MongoDB, Redis) | 5432, 27017, 6379 |
-| **latta-csbot-llm** | LLM Service (Ollama) | 11434 |
-| **latta-csbot-user-v1** | User Chat Services (Frontend + Backend + AI Agent) | 80, 3001, 8765 |
-| **latta-csbot-admin** | Admin Panel + RAG Pipeline | 81, 3002, 8001 |
+| **latte-csbot-database** | ฐานข้อมูลกลาง (Supabase, MongoDB, Redis) | 5432, 27017, 6379 |
+| **latte-csbot-llm** | LLM Service (Ollama) | 11434 |
+| **latte-csbot-user-v1** | User Chat Services (Frontend + Backend + AI Agent) | 80, 3001, 8765 |
+| **latte-csbot-admin** | Admin Panel + RAG Pipeline | 81, 3002, 8001 |
 
 ---
 
@@ -27,7 +27,7 @@ flowchart TB
         NginxAdmin["Nginx (Admin)"]
     end
 
-    subgraph UserServices["👤 latta-csbot-user-v1"]
+    subgraph UserServices["👤 latte-csbot-user-v1"]
         subgraph ChatService["Chat Service"]
             UserFrontend["Frontend<br/>(Port 80)"]
             UserBackend["Backend API<br/>(Port 3001)"]
@@ -42,7 +42,7 @@ flowchart TB
         end
     end
 
-    subgraph AdminServices["⚙️ latta-csbot-admin"]
+    subgraph AdminServices["⚙️ latte-csbot-admin"]
         subgraph AdminPanel["Admin Panel"]
             AdminFrontend["Angular Frontend<br/>(Port 81)"]
             AdminBackend["Node.js Backend<br/>(Port 3002)"]
@@ -58,7 +58,7 @@ flowchart TB
         end
     end
 
-    subgraph DatabaseLayer["🗄️ latta-csbot-database"]
+    subgraph DatabaseLayer["🗄️ latte-csbot-database"]
         subgraph Supabase["Supabase Stack"]
             PostgreSQL[("PostgreSQL<br/>(Port 5432)")]
             Kong["Kong API Gateway"]
@@ -71,7 +71,7 @@ flowchart TB
         Redis[("Redis<br/>(Port 6379)")]
     end
 
-    subgraph LLMService["🤖 latta-csbot-llm"]
+    subgraph LLMService["🤖 latte-csbot-llm"]
         Ollama["Ollama Server<br/>(Port 11434)"]
         ChatModel["Chat Model<br/>(qwen2.5)"]
         EmbedModel["Embedding Model"]
@@ -353,7 +353,7 @@ flowchart LR
 
 ## Component Architecture
 
-### latta-csbot-user-v1 Components
+### latte-csbot-user-v1 Components
 
 ```mermaid
 graph TB
@@ -428,7 +428,7 @@ graph TB
     SubWorker --> Workflow
 ```
 
-### latta-csbot-admin Components
+### latte-csbot-admin Components
 
 ```mermaid
 graph TB
@@ -502,7 +502,7 @@ graph TB
     Pipeline --> Storage
 ```
 
-### latta-csbot-database Components
+### latte-csbot-database Components
 
 ```mermaid
 graph TB
@@ -569,7 +569,7 @@ graph TB
 ```mermaid
 graph TB
     subgraph DockerNetworks["Docker Networks"]
-        subgraph DatabaseNet["latta-database-network"]
+        subgraph DatabaseNet["latte-database-network"]
             direction TB
             DB1[Supabase]
             DB2[MongoDB]
@@ -583,14 +583,14 @@ graph TB
             U3[AI Agent]
         end
         
-        subgraph AdminNet["latta-admin-network"]
+        subgraph AdminNet["latte-admin-network"]
             direction TB
             A1[Admin Frontend]
             A2[Admin Backend]
             A3[RAG Upload]
         end
         
-        subgraph LLMNet["latta-llm-network"]
+        subgraph LLMNet["latte-llm-network"]
             direction TB
             L1[Ollama]
         end
@@ -690,19 +690,19 @@ flowchart LR
 graph TB
     subgraph Production["Production Environment"]
         subgraph DockerHost["Docker Host"]
-            subgraph ComposeDB["docker-compose.yml<br/>latta-csbot-database"]
+            subgraph ComposeDB["docker-compose.yml<br/>latte-csbot-database"]
                 DB_SERVICES[Supabase + MongoDB + Redis]
             end
             
-            subgraph ComposeLLM["docker-compose.yml<br/>latta-csbot-llm"]
+            subgraph ComposeLLM["docker-compose.yml<br/>latte-csbot-llm"]
                 LLM_SERVICE[Ollama]
             end
             
-            subgraph ComposeUser["docker-compose.yml<br/>latta-csbot-user-v1"]
+            subgraph ComposeUser["docker-compose.yml<br/>latte-csbot-user-v1"]
                 USER_SERVICES[Frontend + Backend + AI Agent]
             end
             
-            subgraph ComposeAdmin["docker-compose.yml<br/>latta-csbot-admin"]
+            subgraph ComposeAdmin["docker-compose.yml<br/>latte-csbot-admin"]
                 ADMIN_SERVICES[Admin Panel + RAG]
             end
         end
@@ -716,10 +716,10 @@ graph TB
         end
         
         subgraph Networks["Docker Networks"]
-            N1[latta-database-network]
+            N1[latte-database-network]
             N2[latta_v1-network]
-            N3[latta-admin-network]
-            N4[latta-llm-network]
+            N3[latte-admin-network]
+            N4[latte-llm-network]
         end
     end
     
@@ -744,7 +744,7 @@ graph TB
 
 ```mermaid
 flowchart TB
-    subgraph EnvDB["latta-csbot-database .env"]
+    subgraph EnvDB["latte-csbot-database .env"]
         POSTGRES[POSTGRES_PASSWORD]
         JWT[JWT_SECRET]
         ANON[ANON_KEY]
@@ -753,19 +753,19 @@ flowchart TB
         MONGO_PASS[MONGO_ROOT_PASSWORD]
     end
     
-    subgraph EnvUser["latta-csbot-user-v1 .env"]
+    subgraph EnvUser["latte-csbot-user-v1 .env"]
         U_MONGO["MONGO_URL<br/>(uses MONGO_ROOT_*)"]
         U_SUPABASE["SUPABASE_URL<br/>(uses ANON_KEY)"]
         U_REDIS["REDIS_HOST/PORT<br/>REDIS_PASSWORD"]
         U_EXTERNAL["EXTERNAL_AUTH_API"]
     end
     
-    subgraph EnvAdmin["latta-csbot-admin .env"]
+    subgraph EnvAdmin["latte-csbot-admin .env"]
         A_SUPABASE["SUPABASE_URL<br/>(uses SERVICE_ROLE_KEY)"]
         A_OLLAMA["OLLAMA_BASE_URL"]
     end
     
-    subgraph EnvLLM["latta-csbot-llm .env"]
+    subgraph EnvLLM["latte-csbot-llm .env"]
         L_PORT["OLLAMA_PORT"]
     end
     
@@ -787,7 +787,7 @@ flowchart TB
 ```mermaid
 graph LR
     %% Level 1: Database
-    DB[(latta-csbot-database)]
+    DB[(latte-csbot-database)]
     
     %% Level 2: LLM
     LLM[Ollama]
@@ -847,22 +847,22 @@ graph LR
 | Service | Container | Internal Port | External Port | Environment Variable |
 |---------|-----------|---------------|---------------|---------------------|
 | **Database Layer** |
-| Supabase Kong | latta-supabase-kong | 8000 | `${KONG_HTTP_PORT}` | 8000 |
-| Supabase Studio | latta-supabase-studio | 3000 | 3000 | - |
-| PostgreSQL | latta-supabase-db | 5432 | `${POSTGRES_PORT}` | 5432 |
-| MongoDB | latta-mongodb | 27017 | `${MONGO_PORT}` | 27017 |
-| Redis | latta-redis | 6379 | `${REDIS_PORT}` | 6379 |
+| Supabase Kong | latte-supabase-kong | 8000 | `${KONG_HTTP_PORT}` | 8000 |
+| Supabase Studio | latte-supabase-studio | 3000 | 3000 | - |
+| PostgreSQL | latte-supabase-db | 5432 | `${POSTGRES_PORT}` | 5432 |
+| MongoDB | latte-mongodb | 27017 | `${MONGO_PORT}` | 27017 |
+| Redis | latte-redis | 6379 | `${REDIS_PORT}` | 6379 |
 | Redis Insight | - | 8001 | `${REDIS_INSIGHT_PORT}` | 8001 |
 | **LLM Layer** |
-| Ollama | latta-ollama | 11434 | `${OLLAMA_PORT}` | 11434 |
+| Ollama | latte-ollama | 11434 | `${OLLAMA_PORT}` | 11434 |
 | **User Services** |
 | User Frontend | latta_v1-user-frontend | 80 | `${USER_FRONTEND_PORT}` | 8080 |
 | User Backend | latta_v1-user-backend | 3001 | `${USER_BACKEND_PORT}` | 3001 |
 | AI Agent Server | latta_v1-ai-agent-server | 8765 | `${AI_AGENT_PORT}` | 8765 |
 | **Admin Services** |
-| Admin Frontend | latta-admin-frontend | 81 | `${ADMIN_FRONTEND_PORT}` | 81 |
-| Admin Backend | latta-admin-backend | 3002 | `${ADMIN_PORT}` | 3002 |
-| RAG Upload | latta-multimodal-rag | 8001 | `${RAG_UPLOAD_PORT}` | 8001 |
+| Admin Frontend | latte-admin-frontend | 81 | `${ADMIN_FRONTEND_PORT}` | 81 |
+| Admin Backend | latte-admin-backend | 3002 | `${ADMIN_PORT}` | 3002 |
+| RAG Upload | latte-multimodal-rag | 8001 | `${RAG_UPLOAD_PORT}` | 8001 |
 
 ---
 

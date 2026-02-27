@@ -1,0 +1,179 @@
+# ===========================================
+# latta_v1 CS-BOT USER SERVICES
+# ===========================================
+# User-facing services only (No Database)
+# Connects to external latte-csbot-database
+#
+# Prerequisites:
+#   - latte-csbot-database must be running
+#
+# Usage:
+#   Production:  docker compose up -d
+#   Development: NODE_ENV=development docker compose up -d
+#   Stop:        docker compose down
+#   Destroy:     docker compose down -v --remove-orphans
+# ===========================================
+
+name: latta_v1-bot
+
+services:
+  # ==========================================
+  # Cache Services (Redis only - No RabbitMQ)
+  # ==========================================
+  redis:
+    container_name: latta_v1-redis
+    image: redis/redis-stack:latest
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT}:6379"
+      - "${REDIS_INSIGHT_PORT}:8001"
+    volumes:
+      - redis_data:/data
+    environment:
+      - REDIS_ARGS=--requirepass ${REDIS_PASSWORD} --notify-keyspace-events Ex
+    healthcheck:
+      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - latta_v1-network
+      - latte-database-network
+
+  # ==========================================
+  # Webchat Application Services
+  # ==========================================
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    container_name: latta_v1-user-frontend
+    ports:
+      - "${USER_FRONTEND_PORT}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - latta_v1-network
+      - latte-database-network
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    container_name: latta_v1-user-backend
+    ports:
+      - "${USER_BACKEND_PORT}:3001"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - PORT=${USER_BACKEND_PORT}
+      # Database connections (from latte-csbot-database)
+      - MONGO_URL=mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD}@mongodb:27017/${MONGO_DB}?authSource=admin
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_CHAT_DB=${REDIS_CHAT_DB}
+      - REDIS_VERIFY_DB=${REDIS_VERIFY_DB}
+      - REDIS_QUEUE_DB=${REDIS_QUEUE_DB}
+      # Supabase (from latte-csbot-database)
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - SUPABASE_PUBLIC_URL=${SUPABASE_PUBLIC_URL}
+      # AI Agent
+      - AGENT_WEBHOOK_URL=${AGENT_WEBHOOK_URL}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL}
+      - AI_AGENT_QUEUE_NAME=${AI_AGENT_QUEUE_NAME}
+      # Rate Limiting
+      - RATE_LIMIT_WINDOW_MS=${RATE_LIMIT_WINDOW_MS}
+      - RATE_LIMIT_MAX_REQUESTS=${RATE_LIMIT_MAX_REQUESTS}
+      - MAX_LOGIN_ATTEMPTS=${MAX_LOGIN_ATTEMPTS}
+      - BLOCK_DURATION_MS=${BLOCK_DURATION_MS}
+      - CHAT_RATE_LIMIT_WINDOW_MS=60000
+      - CHAT_RATE_LIMIT_MAX=60
+      # Session
+      - REDIS_SESSION_TTL=${REDIS_SESSION_TTL}
+      # External Services
+      - EXTERNAL_AUTH_API=${EXTERNAL_AUTH_API}
+      - AUTH_BYPASS_MODE=${AUTH_BYPASS_MODE}
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/config" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - latta_v1-network
+      - latte-database-network
+    depends_on:
+      - redis
+
+  # ==========================================
+  # AI Agent Service (All-in-One Container)
+  # Combines: Express Server + Main Worker + Sub Workers
+  # ==========================================
+  ai-agent:
+    build:
+      context: .
+      dockerfile: docker/ai-agent.Dockerfile
+    container_name: latta_v1-ai-agent
+    ports:
+      - "${AI_AGENT_PORT}:${AI_AGENT_PORT}"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - AI_AGENT_PORT=${AI_AGENT_PORT}
+      # Redis connection
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_QUEUE_DB=${REDIS_QUEUE_DB}
+      - REDIS_VERIFY_DB=${REDIS_VERIFY_DB}
+      - REDIS_COOLDOWN_DB=${REDIS_COOLDOWN_DB}
+      # Queue Names
+      - AI_AGENT_QUEUE_NAME=${AI_AGENT_QUEUE_NAME}
+      - MS_FORM_QUEUE_NAME=${MS_FORM_QUEUE_NAME}
+      - RESET_PASSWORD_QUEUE_NAME=${RESET_PASSWORD_QUEUE_NAME}
+      # URLs
+      - AGENT_WEBHOOK_URL=${AGENT_WEBHOOK_URL}
+      - API_BASE=${API_BASE}
+      - MS_FORMS_REPORT_URL=${MS_FORMS_REPORT_URL}
+    depends_on:
+      backend:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8765/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - latta_v1-network
+      - latte-database-network
+    command: ["node", "ai-agent.js"]
+
+# ==========================================
+# Networks
+# ==========================================
+networks:
+  latta_v1-network:
+    driver: bridge
+  # Connect to shared database network
+  latte-database-network:
+    external: true
+
+# ==========================================
+# Volumes
+# ==========================================
+volumes:
+  redis_data:

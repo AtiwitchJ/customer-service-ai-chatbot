@@ -58,38 +58,38 @@ volumes/
 */volumes/
 **/volumes/*
 # Exception: allow vector.yml to be committed (must follow volume rules)
-!latta-csbot-database/volumes/
-latta-csbot-database/volumes/*
-!latta-csbot-database/volumes/logs/
-latta-csbot-database/volumes/logs/*
-!latta-csbot-database/volumes/logs/vector.yml
+!latte-csbot-database/volumes/
+latte-csbot-database/volumes/*
+!latte-csbot-database/volumes/logs/
+latte-csbot-database/volumes/logs/*
+!latte-csbot-database/volumes/logs/vector.yml
 # Exception: allow db config files to be committed
-!latta-csbot-database/volumes/db/
-latta-csbot-database/volumes/db/*
-!latta-csbot-database/volumes/db/data/
-latta-csbot-database/volumes/db/data/*
-!latta-csbot-database/volumes/db/init-scripts/
-latta-csbot-database/volumes/db/init-scripts/*
-!latta-csbot-database/volumes/db/migrations/
-latta-csbot-database/volumes/db/migrations/*
-!latta-csbot-database/volumes/db/pooler/
-latta-csbot-database/volumes/db/pooler/*
+!latte-csbot-database/volumes/db/
+latte-csbot-database/volumes/db/*
+!latte-csbot-database/volumes/db/data/
+latte-csbot-database/volumes/db/data/*
+!latte-csbot-database/volumes/db/init-scripts/
+latte-csbot-database/volumes/db/init-scripts/*
+!latte-csbot-database/volumes/db/migrations/
+latte-csbot-database/volumes/db/migrations/*
+!latte-csbot-database/volumes/db/pooler/
+latte-csbot-database/volumes/db/pooler/*
 # Exception: allow API and functions to be committed
-!latta-csbot-database/volumes/api/
-latta-csbot-database/volumes/api/*
-!latta-csbot-database/volumes/functions/
-latta-csbot-database/volumes/functions/*
-!latta-csbot-database/volumes/snippets/
-latta-csbot-database/volumes/snippets/*
+!latte-csbot-database/volumes/api/
+latte-csbot-database/volumes/api/*
+!latte-csbot-database/volumes/functions/
+latte-csbot-database/volumes/functions/*
+!latte-csbot-database/volumes/snippets/
+latte-csbot-database/volumes/snippets/*
 
 # Ollama models (can be very large)
 ollama_data/
 .ollama/
 
 # Supabase / Database
-.latta-csbot-database/volumes/db/data/
-latta-csbot-database/volumes/db/data/
-.latta-csbot-database/volumes/storage/
+.latte-csbot-database/volumes/db/data/
+latte-csbot-database/volumes/db/data/
+.latte-csbot-database/volumes/storage/
 
 # Redis data
 redis_data/

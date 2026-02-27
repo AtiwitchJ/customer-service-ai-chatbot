@@ -1,5 +1,5 @@
 # ===========================================
-# LATTA CS-BOT DEV ENVIRONMENT
+# LATTE CS-BOT DEV ENVIRONMENT
 # All services with bind mounts (local files)
 # ===========================================
 #
@@ -10,7 +10,7 @@
 #
 # ===========================================
 
-name: latta-csbot-dev
+name: latte-csbot-dev
 
 # Docker Hub authentication to increase rate limit
 # Run: docker login -u your_username before running compose
@@ -21,7 +21,7 @@ services:
   # LLM Service - Ollama
   # ==========================================
   ollama:
-    container_name: latta-ollama
+    container_name: latte-ollama
     image: ollama/ollama:0.17.0
     restart: unless-stopped
     ports:
@@ -33,13 +33,13 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "ollama list || exit 1"]
     networks:
-      - latta-network
+      - latte-network
 
   # ==========================================
   # MongoDB - Document Database
   # ==========================================
   mongodb:
-    container_name: latta-mongodb
+    container_name: latte-mongodb
     image: mongo:8.2
     restart: unless-stopped
     ports:
@@ -57,13 +57,13 @@ services:
       timeout: 10s
       retries: 3
     networks:
-      - latta-network
+      - latte-network
 
   # ==========================================
   # Redis - Cache Services
   # ==========================================
   redis:
-    container_name: latta-redis
+    container_name: latte-redis
     image: redis/redis-stack:7.4.0-v8
     restart: unless-stopped
     ports:
@@ -79,7 +79,7 @@ services:
       timeout: 10s
       retries: 3
     networks:
-      - latta-network
+      - latte-network
 
   # ==========================================
   # Admin Services
@@ -87,9 +87,9 @@ services:
 
   admin-backend:
     build:
-      context: ./latta-csbot-admin
+      context: ./latte-csbot-admin
       dockerfile: docker/admin-backend.Dockerfile
-    container_name: latta-admin-backend
+    container_name: latte-admin-backend
     ports:
       - "${ADMIN_PORT:-3002}:3002"
       - "${DEBUG_PORT:-9229}:9229"
@@ -106,9 +106,9 @@ services:
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL}
       - OLLAMA_EMBED_MODEL=${OLLAMA_EMBED_MODEL}
     volumes:
-      - ./latta-csbot-admin/backend/src:/app/src
-      - ./latta-csbot-admin/import-data:/app/import
-      - ./latta-csbot-admin/backend/src/tools:/app/tools
+      - ./latte-csbot-admin/backend/src:/app/src
+      - ./latte-csbot-admin/import-data:/app/import
+      - ./latte-csbot-admin/backend/src/tools:/app/tools
       - ./admin-backend-cache:/app/cache
       - ./admin-dashboard-cache:/app/src/dashboard_service/utils
       - ./admin-json-data:/app/data
@@ -128,22 +128,22 @@ services:
       retries: 3
       start_period: 20s
     networks:
-      - latta-network
+      - latte-network
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
   admin-frontend:
     build:
-      context: ./latta-csbot-admin
+      context: ./latte-csbot-admin
       dockerfile: docker/admin-frontend.Dockerfile
-    container_name: latta-admin-frontend
+    container_name: latte-admin-frontend
     ports:
       - "${ADMIN_FRONTEND_PORT:-81}:81"
     environment:
       - NODE_ENV=${NODE_ENV:-production}
     volumes:
-      - ./latta-csbot-admin/frontend/src:/app/src
-      - ./latta-csbot-admin/frontend/public:/app/public
+      - ./latte-csbot-admin/frontend/src:/app/src
+      - ./latte-csbot-admin/frontend/public:/app/public
     depends_on:
       admin-backend:
         condition: service_healthy
@@ -162,13 +162,13 @@ services:
       timeout: 10s
       retries: 3
     networks:
-      - latta-network
+      - latte-network
 
   multimodal-rag-upload:
     build:
-      context: ./latta-csbot-admin/upload_file
+      context: ./latte-csbot-admin/upload_file
       dockerfile: Dockerfile
-    container_name: latta-multimodal-rag
+    container_name: latte-multimodal-rag
     restart: unless-stopped
     env_file:
       - .env
@@ -188,11 +188,11 @@ services:
     ports:
       - "${RAG_UPLOAD_PORT:-8001}:8001"
     volumes:
-      - ./latta-csbot-admin/upload_file:/app
+      - ./latte-csbot-admin/upload_file:/app
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
-      - latta-network
+      - latte-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
       interval: ${HEALTHCHECK_INTERVAL:-30s}
@@ -206,25 +206,25 @@ services:
 
   user-frontend:
     build:
-      context: ./latta-csbot-user-v1
+      context: ./latte-csbot-user-v1
       dockerfile: docker/frontend.Dockerfile
-    container_name: latta-user-frontend
+    container_name: latte-user-frontend
     ports:
       - "${USER_FRONTEND_PORT:-80}:80"
     volumes:
-      - ./latta-csbot-user-v1/frontend:/usr/share/nginx/html
+      - ./latte-csbot-user-v1/frontend:/usr/share/nginx/html
     depends_on:
       user-backend:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - latta-network
+      - latte-network
 
   user-backend:
     build:
-      context: ./latta-csbot-user-v1
+      context: ./latte-csbot-user-v1
       dockerfile: docker/backend.Dockerfile
-    container_name: latta-user-backend
+    container_name: latte-user-backend
     ports:
       - "${USER_BACKEND_PORT:-3001}:3001"
     env_file:
@@ -254,8 +254,8 @@ services:
       - EXTERNAL_AUTH_API=${EXTERNAL_AUTH_API}
       - AUTH_BYPASS_MODE=${AUTH_BYPASS_MODE}
     volumes:
-      - ./latta-csbot-user-v1/backend/src:/app/src
-      - ./latta-csbot-user-v1/latta-csbot_ai-agent:/app/latta-csbot_ai-agent
+      - ./latte-csbot-user-v1/backend/src:/app/src
+      - ./latte-csbot-user-v1/latte-csbot_ai-agent:/app/latte-csbot_ai-agent
     restart: unless-stopped
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -274,15 +274,15 @@ services:
       retries: 5
       start_period: 10s
     networks:
-      - latta-network
+      - latte-network
     depends_on:
       - redis
 
   ai-agent:
     build:
-      context: ./latta-csbot-user-v1
+      context: ./latte-csbot-user-v1
       dockerfile: docker/ai-agent.Dockerfile
-    container_name: latta-ai-agent
+    container_name: latte-ai-agent
     ports:
       - "${AI_AGENT_PORT:-8765}:${AI_AGENT_PORT}"
     env_file:
@@ -303,7 +303,7 @@ services:
       - API_BASE=${API_BASE}
       - MS_FORMS_REPORT_URL=${MS_FORMS_REPORT_URL}
     volumes:
-      - ./latta-csbot-user-v1/latta-csbot_ai-agent:/app
+      - ./latte-csbot-user-v1/latte-csbot_ai-agent:/app
     depends_on:
       user-backend:
         condition: service_healthy
@@ -326,14 +326,14 @@ services:
       timeout: 10s
       retries: 3
     networks:
-      - latta-network
+      - latte-network
     command: ["node", "ai-agent.js"]
 
 # ===========================================
 # Networks
 # ===========================================
 networks:
-  latta-network:
+  latte-network:
     driver: bridge
 
 # ===========================================

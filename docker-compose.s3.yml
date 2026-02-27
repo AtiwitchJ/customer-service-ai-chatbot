@@ -1,7 +1,7 @@
 services:
 
   minio:
-    container_name: latta-minio
+    container_name: latte-minio
     image: cgr.dev/chainguard/minio
     env_file:
       - .env
@@ -20,10 +20,10 @@ services:
     volumes:
       - ./volumes/storage:/data:z
     networks:
-      - latta-network
+      - latte-network
 
   minio-createbucket:
-    container_name: latta-minio-createbucket
+    container_name: latte-minio-createbucket
     image: cgr.dev/chainguard/minio-client:latest-dev
     env_file:
       - .env
@@ -36,7 +36,7 @@ services:
       mc mb --ignore-existing supa-minio/${GLOBAL_S3_BUCKET}
       "
     networks:
-      - latta-network
+      - latte-network
 
   storage:
     container_name: supabase-storage
@@ -98,8 +98,8 @@ services:
     #volumes:
     #  - ./volumes/storage:/var/lib/storage:z
     networks:
-      - latta-network
+      - latte-network
 
 networks:
-  latta-network:
+  latte-network:
     driver: bridge

@@ -1,5 +1,5 @@
 # ===========================================
-# LATTA CS-BOT UNIFIED SERVICES
+# LATTE CS-BOT UNIFIED SERVICES
 # Main unified stack configuration
 # ===========================================
 #
@@ -14,7 +14,7 @@
 #
 # ===========================================
 
-name: latta-csbot-unified
+name: latte-csbot-unified
 
 services:
   # ==========================================
@@ -25,7 +25,7 @@ services:
   # LLM Service - Ollama
   # ==========================================
   ollama:
-    container_name: latta-ollama
+    container_name: latte-ollama
     image: ollama/ollama:0.17.0
     restart: unless-stopped
     env_file:
@@ -39,13 +39,13 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "ollama list || exit 1"]
     networks:
-      - latta-network
+      - latte-network
 
   # ==========================================
   # MongoDB - Document Database
   # ==========================================
   mongodb:
-    container_name: latta-mongodb
+    container_name: latte-mongodb
     image: mongo:8.2
     restart: unless-stopped
     env_file:
@@ -64,13 +64,13 @@ services:
       timeout: 10s
       retries: 3
     networks:
-      - latta-network
+      - latte-network
 
   # ==========================================
   # Redis - Cache Services
   # ==========================================
   redis:
-    container_name: latta-redis
+    container_name: latte-redis
     image: redis/redis-stack:7.4.0-v8
     restart: unless-stopped
     env_file:
@@ -88,7 +88,7 @@ services:
       timeout: 10s
       retries: 3
     networks:
-      - latta-network
+      - latte-network
 
   # ==========================================
   # Supabase Infrastructure Layer
@@ -102,21 +102,21 @@ services:
     ports:
       - 5433:5432
     volumes:
-      - ./latta-csbot-database/volumes/db/realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql:Z
+      - ./latte-csbot-database/volumes/db/realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql:Z
       # Must be superuser to create event trigger
-      - ./latta-csbot-database/volumes/db/webhooks.sql:/docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql:Z
+      - ./latte-csbot-database/volumes/db/webhooks.sql:/docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql:Z
       # Must be superuser to alter reserved role
-      - ./latta-csbot-database/volumes/db/roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:Z
+      - ./latte-csbot-database/volumes/db/roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:Z
       # Initialize the database settings with JWT_SECRET and JWT_EXP
-      - ./latta-csbot-database/volumes/db/jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql:Z
+      - ./latte-csbot-database/volumes/db/jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql:Z
       # PGDATA: use named volume to avoid corrupt data dir (e.g. missing pg_notify)
       - db_data:/var/lib/postgresql/data
       # Changes required for internal supabase data such as _analytics
-      - ./latta-csbot-database/volumes/db/_supabase.sql:/docker-entrypoint-initdb.d/migrations/97-_supabase.sql:Z
+      - ./latte-csbot-database/volumes/db/_supabase.sql:/docker-entrypoint-initdb.d/migrations/97-_supabase.sql:Z
       # Changes required for Analytics support
-      - ./latta-csbot-database/volumes/db/logs.sql:/docker-entrypoint-initdb.d/migrations/99-logs.sql:Z
+      - ./latte-csbot-database/volumes/db/logs.sql:/docker-entrypoint-initdb.d/migrations/99-logs.sql:Z
       # Changes required for Pooler support
-      - ./latta-csbot-database/volumes/db/pooler.sql:/docker-entrypoint-initdb.d/migrations/99-pooler.sql:Z
+      - ./latte-csbot-database/volumes/db/pooler.sql:/docker-entrypoint-initdb.d/migrations/99-pooler.sql:Z
       # Use named volume to persist pgsodium decryption key between restarts
       - db-config:/etc/postgresql-custom
     healthcheck:
@@ -155,14 +155,14 @@ services:
         "log_min_messages=fatal" # prevents Realtime polling queries from appearing in logs
       ]
     networks:
-      - latta-network
+      - latte-network
 
   vector:
     container_name: supabase-vector
     image: timberio/vector:0.53.0-alpine
     restart: unless-stopped
     volumes:
-      - ./latta-csbot-database/volumes/logs/vector.yml:/etc/vector/vector.yml:ro,z
+      - ./latte-csbot-database/volumes/logs/vector.yml:/etc/vector/vector.yml:ro,z
       - ${DOCKER_SOCKET_LOCATION}:/var/run/docker.sock:ro,z
     healthcheck:
       test:
@@ -187,7 +187,7 @@ services:
     security_opt:
       - "label:disable"
     networks:
-      - latta-network
+      - latte-network
 
   analytics:
     container_name: supabase-analytics
@@ -223,7 +223,7 @@ services:
       POSTGRES_BACKEND_SCHEMA: _analytics
       LOGFLARE_FEATURE_FLAG_OVERRIDE: multibackend=true
     networks:
-      - latta-network
+      - latte-network
 
   # ==========================================
   # Supabase Core Services (depend on db + analytics)
@@ -289,7 +289,7 @@ services:
       GOTRUE_EXTERNAL_PHONE_ENABLED: ${ENABLE_PHONE_SIGNUP}
       GOTRUE_SMS_AUTOCONFIRM: ${ENABLE_PHONE_AUTOCONFIRM}
     networks:
-      - latta-network
+      - latte-network
 
   rest:
     container_name: supabase-rest
@@ -313,7 +313,7 @@ services:
         "postgrest"
       ]
     networks:
-      - latta-network
+      - latte-network
 
   realtime:
     container_name: realtime-dev.supabase-realtime
@@ -353,7 +353,7 @@ services:
       RUN_JANITOR: "true"
       DISABLE_HEALTHCHECK_LOGGING: "true"
     networks:
-      - latta-network
+      - latte-network
 
   imgproxy:
     container_name: supabase-imgproxy
@@ -378,7 +378,7 @@ services:
       IMGPROXY_ENABLE_WEBP_DETECTION: ${IMGPROXY_ENABLE_WEBP_DETECTION}
       IMGPROXY_MAX_SRC_RESOLUTION: 16.8
     networks:
-      - latta-network
+      - latte-network
 
   storage:
     container_name: supabase-storage
@@ -426,7 +426,7 @@ services:
     volumes:
       - supabase-storage-data:/var/lib/storage:z
     networks:
-      - latta-network
+      - latte-network
 
   meta:
     container_name: supabase-meta
@@ -446,14 +446,14 @@ services:
       PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD}
       CRYPTO_KEY: ${PG_META_CRYPTO_KEY}
     networks:
-      - latta-network
+      - latte-network
 
   functions:
     container_name: supabase-edge-functions
     image: supabase/edge-runtime:v1.70.3
     restart: unless-stopped
     volumes:
-      - ./latta-csbot-database/volumes/functions:/home/deno/functions:Z
+      - ./latte-csbot-database/volumes/functions:/home/deno/functions:Z
       - deno-cache:/root/.cache/deno
     depends_on:
       analytics:
@@ -472,7 +472,7 @@ services:
         "/home/deno/functions/main"
       ]
     networks:
-      - latta-network
+      - latte-network
 
   kong:
     container_name: supabase-kong
@@ -482,7 +482,7 @@ services:
       - ${KONG_HTTP_PORT}:8000/tcp
       - ${KONG_HTTPS_PORT}:8443/tcp
     volumes:
-      - ./latta-csbot-database/volumes/api/kong.yml:/home/kong/temp.yml:ro,z
+      - ./latte-csbot-database/volumes/api/kong.yml:/home/kong/temp.yml:ro,z
     depends_on:
       analytics:
         condition: service_healthy
@@ -509,7 +509,7 @@ services:
       DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD}
     entrypoint: bash -c 'eval "echo \"$$(cat ~/temp.yml)\"" > ~/kong.yml && /docker-entrypoint.sh kong docker-start'
     networks:
-      - latta-network
+      - latte-network
 
   studio:
     container_name: supabase-studio
@@ -561,10 +561,10 @@ services:
       SNIPPETS_MANAGEMENT_FOLDER: /app/snippets
       EDGE_FUNCTIONS_MANAGEMENT_FOLDER: /app/edge-functions
     volumes:
-      - ./latta-csbot-database/volumes/snippets:/app/snippets:Z
-      - ./latta-csbot-database/volumes/functions:/app/edge-functions:Z
+      - ./latte-csbot-database/volumes/snippets:/app/snippets:Z
+      - ./latte-csbot-database/volumes/functions:/app/edge-functions:Z
     networks:
-      - latta-network
+      - latte-network
 
   supavisor:
     container_name: supabase-pooler
@@ -574,7 +574,7 @@ services:
       - ${POSTGRES_PORT}:5432
       - ${POOLER_PROXY_PORT_TRANSACTION}:6543
     volumes:
-      - ./latta-csbot-database/volumes/pooler/pooler.exs:/etc/pooler/pooler.exs:ro,z
+      - ./latte-csbot-database/volumes/pooler/pooler.exs:/etc/pooler/pooler.exs:ro,z
     healthcheck:
       test:
         [
@@ -635,7 +635,7 @@ services:
         "/app/bin/migrate && /app/bin/supavisor eval \"$$(cat /etc/pooler/pooler.exs)\" && /app/bin/server"
       ]
     networks:
-      - latta-network
+      - latte-network
 
   # ==========================================
   # Database Initialization (Custom RAG Schema)
@@ -643,7 +643,7 @@ services:
   # ==========================================
   db-init:
     image: postgres:15.8-alpine
-    container_name: latta-db-init
+    container_name: latte-db-init
     restart: "no"
     depends_on:
       supavisor:
@@ -655,7 +655,7 @@ services:
       POSTGRES_USER: supabase_admin
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - ./latta-csbot-database/volumes/db/init-scripts/database_lc.sql:/database_lc.sql:ro
+      - ./latte-csbot-database/volumes/db/init-scripts/database_lc.sql:/database_lc.sql:ro
     command: >
       sh -c "
         echo 'Waiting for database to be ready...' &&
@@ -668,7 +668,7 @@ services:
         echo 'Database initialization completed!'
       "
     networks:
-      - latta-network
+      - latte-network
 
   # ==========================================
   # Application Layer
@@ -680,9 +680,9 @@ services:
 
   admin-backend:
     build:
-      context: ./latta-csbot-admin
+      context: ./latte-csbot-admin
       dockerfile: docker/admin-backend.Dockerfile
-    container_name: latta-admin-backend
+    container_name: latte-admin-backend
     ports:
       - "${ADMIN_PORT:-3002}:3002"
       - "${DEBUG_PORT:-9229}:9229"
@@ -702,8 +702,8 @@ services:
       - admin-backend-cache:/app/cache
       - admin-dashboard-cache:/app/src/dashboard_service/utils
       - admin-json-data:/app/data
-      - ./latta-csbot-admin/backend/src/tools:/app/tools
-      - ./latta-csbot-admin/import-data:/app/import
+      - ./latte-csbot-admin/backend/src/tools:/app/tools
+      - ./latte-csbot-admin/import-data:/app/import
     restart: unless-stopped
     healthcheck:
       test:
@@ -720,7 +720,7 @@ services:
       retries: 3
       start_period: 20s
     networks:
-      - latta-network
+      - latte-network
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -729,9 +729,9 @@ services:
 
   admin-frontend:
     build:
-      context: ./latta-csbot-admin
+      context: ./latte-csbot-admin
       dockerfile: docker/admin-frontend.Dockerfile
-    container_name: latta-admin-frontend
+    container_name: latte-admin-frontend
     ports:
       - "${ADMIN_FRONTEND_PORT:-81}:81"
     environment:
@@ -754,13 +754,13 @@ services:
       timeout: 10s
       retries: 3
     networks:
-      - latta-network
+      - latte-network
 
   multimodal-rag-upload:
     build:
-      context: ./latta-csbot-admin/upload_file
+      context: ./latte-csbot-admin/upload_file
       dockerfile: Dockerfile
-    container_name: latta-multimodal-rag
+    container_name: latte-multimodal-rag
     restart: unless-stopped
     env_file:
       - .env
@@ -784,7 +784,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
-      - latta-network
+      - latte-network
     depends_on:
       db-init:
         condition: service_completed_successfully
@@ -801,9 +801,9 @@ services:
 
   user-backend:
     build:
-      context: ./latta-csbot-user-v1
+      context: ./latte-csbot-user-v1
       dockerfile: docker/backend.Dockerfile
-    container_name: latta-user-backend
+    container_name: latte-user-backend
     ports:
       - "${USER_BACKEND_PORT:-3001}:3001"
     env_file:
@@ -848,7 +848,7 @@ services:
       retries: 5
       start_period: 10s
     networks:
-      - latta-network
+      - latte-network
     depends_on:
       redis:
         condition: service_healthy
@@ -857,9 +857,9 @@ services:
 
   ai-agent:
     build:
-      context: ./latta-csbot-user-v1
+      context: ./latte-csbot-user-v1
       dockerfile: docker/ai-agent.Dockerfile
-    container_name: latta-ai-agent
+    container_name: latte-ai-agent
     ports:
       - "${AI_AGENT_PORT:-8765}:8765"
     env_file:
@@ -901,14 +901,14 @@ services:
       timeout: 10s
       retries: 3
     networks:
-      - latta-network
+      - latte-network
     command: ["node", "ai-agent.js"]
 
   user-frontend:
     build:
-      context: ./latta-csbot-user-v1
+      context: ./latte-csbot-user-v1
       dockerfile: docker/frontend.Dockerfile
-    container_name: latta-user-frontend
+    container_name: latte-user-frontend
     ports:
       - "${USER_FRONTEND_PORT:-80}:80"
     depends_on:
@@ -916,13 +916,13 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - latta-network
+      - latte-network
 
 # ===========================================
 # Networks
 # ===========================================
 networks:
-  latta-network:
+  latte-network:
     driver: bridge
 
 # ===========================================

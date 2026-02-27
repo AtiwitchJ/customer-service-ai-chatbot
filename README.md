@@ -73,9 +73,9 @@ flowchart TB
 
 | โมดูล | โฟลเดอร์ | หน้าที่ |
 |---|---|---|
-| User Services | `latta-csbot-user-v1/` | หน้าแชทสำหรับผู้ใช้ทั่วไป, backend จัดการสนทนา, AI Agent ประมวลผลคำตอบ |
-| Admin Services | `latta-csbot-admin/` | Dashboard สำหรับผู้ดูแล, backend จัดการข้อมูล, RAG upload อัปโหลดเอกสาร |
-| Data Platform | `latta-csbot-database/` | Supabase stack (PostgreSQL + Kong + Auth + Storage), MongoDB, Redis |
+| User Services | `latte-csbot-user-v1/` | หน้าแชทสำหรับผู้ใช้ทั่วไป, backend จัดการสนทนา, AI Agent ประมวลผลคำตอบ |
+| Admin Services | `latte-csbot-admin/` | Dashboard สำหรับผู้ดูแล, backend จัดการข้อมูล, RAG upload อัปโหลดเอกสาร |
+| Data Platform | `latte-csbot-database/` | Supabase stack (PostgreSQL + Kong + Auth + Storage), MongoDB, Redis |
 | LLM Runtime | Ollama (service ใน compose) | รัน AI model สำหรับ chat, embedding, tagging, vision |
 
 ---
@@ -477,9 +477,9 @@ docker compose up -d user-backend
 ├── docker-compose.yml          # compose หลัก
 ├── docker-compose.dev.yml      # override สำหรับ dev
 ├── .env.example                # ตัวอย่าง environment
-├── latta-csbot-user-v1/        # User frontend + backend + AI agent
-├── latta-csbot-admin/          # Admin frontend + backend + RAG upload
-├── latta-csbot-database/       # Supabase stack + MongoDB
+├── latte-csbot-user-v1/        # User frontend + backend + AI agent
+├── latte-csbot-admin/          # Admin frontend + backend + RAG upload
+├── latte-csbot-database/       # Supabase stack + MongoDB
 ├── sa.md                       # System Analysis
 ├── sd.md                       # System Design
 └── ARCHITECTURE.md             # Architecture เชิงลึก
@@ -513,43 +513,43 @@ docker compose up -d user-backend
 → แก้ค่า port ใน `.env` แล้วรัน `docker compose down && docker compose up -d`
 
 **Kong resolve ไม่ได้**
-→ ตรวจว่า service อยู่ใน network `latta-database-network`
+→ ตรวจว่า service อยู่ใน network `latte-database-network`
 
 **Database connection refused**
 → รอ healthcheck ผ่านก่อน และตรวจ credentials ให้ตรงกัน
 
-**`password authentication failed for user "authenticator"` / latta-supabase-rest unhealthy**
+**`password authentication failed for user "authenticator"` / latte-supabase-rest unhealthy**
 → รหัสผ่านใน PostgreSQL ไม่ตรงกับ `.env` (มักเกิดเมื่อ volume เดิมยังอยู่หลังเปลี่ยนรหัสผ่าน)
 
 **วิธีแก้:**
 ```bash
 # วิธี 1: รีเซ็ตฐานข้อมูล (ข้อมูลจะหาย)
 docker compose down -v
-docker volume rm latta-csbot-unified_db_data 2>$null
+docker volume rm latte-csbot-unified_db_data 2>$null
 cp .env.example .env
-./latta-csbot-database/utils/generate-keys.sh   # ต้องมี openssl (Git Bash/WSL)
+./latte-csbot-database/utils/generate-keys.sh   # ต้องมี openssl (Git Bash/WSL)
 docker compose up -d
 
 # วิธี 2: Sync รหัสผ่าน (ใช้ Git Bash หรือ WSL)
-./latta-csbot-database/utils/db-passwd.sh
+./latte-csbot-database/utils/db-passwd.sh
 docker compose up -d --force-recreate rest storage
 ```
 
-**`Role "supabase_admin" does not exist` / latta-supabase-db unhealthy**
+**`Role "supabase_admin" does not exist` / latte-supabase-db unhealthy**
 → โปรเจกต์นี้มี `00-initial-schema.sql` แล้ว ตรวจสอบว่า volume เก่าถูกลบแล้วเริ่มใหม่ (ดูวิธีแก้ด้านล่าง)
 
-**`must be owner of function uid` / latta-supabase-auth crash loop**
+**`must be owner of function uid` / latte-supabase-auth crash loop**
 → Auth schema มีฟังก์ชัน `auth.uid()` ที่ถูกสร้างโดย role อื่น (มักเกิดจาก volume เดิมหรือ init ไม่สมบูรณ์)
 
-**`no schema has been selected to create in` / latta-supabase-realtime crash loop**
+**`no schema has been selected to create in` / latte-supabase-realtime crash loop**
 → Realtime ไม่พบ schema `_realtime` หรือ search_path ไม่ถูกต้อง (มักเกิดจาก volume เดิม)
 
 **วิธีแก้ทั้ง Auth และ Realtime:** รีเซ็ตฐานข้อมูลแบบเต็ม (ข้อมูลจะหายทั้งหมด)
 ```bash
 docker compose down -v
-docker volume rm latta-csbot-unified_db_data 2>$null
+docker volume rm latte-csbot-unified_db_data 2>$null
 # ถ้าใช้ docker-compose.dev.yml: docker compose -f docker-compose.yml -f docker-compose.dev.yml down -v
-./latta-csbot-database/reset.sh -y   # หรือรัน reset.sh แล้วกด y
+./latte-csbot-database/reset.sh -y   # หรือรัน reset.sh แล้วกด y
 docker compose up -d
 ```
 
@@ -565,23 +565,23 @@ docker compose up -d
 
 ```bash
 # PostgreSQL
-docker exec latta-supabase-db pg_dump -U postgres postgres > backup.sql
+docker exec latte-supabase-db pg_dump -U postgres postgres > backup.sql
 
 # MongoDB
-docker exec latta-mongodb mongodump --out /backup
+docker exec latte-mongodb mongodump --out /backup
 
 # Redis
-docker exec latta-redis redis-cli BGSAVE
+docker exec latte-redis redis-cli BGSAVE
 ```
 
 ---
 
 ## โครงสร้างไฟล์ละเอียด
 
-### latta-csbot-user-v1/
+### latte-csbot-user-v1/
 
 ```
-latta-csbot-user-v1/
+latte-csbot-user-v1/
 ├── backend/
 │   ├── server.js                          # Express entry point + WebSocket setup
 │   └── src/
@@ -604,7 +604,7 @@ latta-csbot-user-v1/
 │           ├── validators.js              # ฟังก์ชัน validate input
 │           └── helpers.js                 # utility ทั่วไป
 │
-├── latta-csbot_ai-agent/
+├── latte-csbot_ai-agent/
 │   ├── ai-agent.js                        # Express server + BullMQ workers รวมกัน
 │   ├── mainflow/app/
 │   │   ├── models/
@@ -627,10 +627,10 @@ latta-csbot-user-v1/
     └── lib/bootstrap/                     # Bootstrap CSS/JS
 ```
 
-### latta-csbot-admin/
+### latte-csbot-admin/
 
 ```
-latta-csbot-admin/
+latte-csbot-admin/
 ├── backend/
 │   ├── server_combined.js                 # Express entry point รวม 3 service
 │   └── src/
@@ -686,10 +686,10 @@ latta-csbot-admin/
             └── sidebar/sidebar.ts         # sidebar navigation
 ```
 
-### latta-csbot-database/
+### latte-csbot-database/
 
 ```
-latta-csbot-database/
+latte-csbot-database/
 └── volumes/
     ├── api/
     │   └── kong.yml                       # Kong API Gateway routes ทั้งหมด
@@ -744,7 +744,7 @@ db-init:
     POSTGRES_USER: supabase_admin
     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
   volumes:
-    - ./latta-csbot-database/volumes/db/init-scripts/database_lc.sql:/database_lc.sql:ro
+    - ./latte-csbot-database/volumes/db/init-scripts/database_lc.sql:/database_lc.sql:ro
   command: >
     sh -c "
       echo 'Waiting for database to be ready...' &&
