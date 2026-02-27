@@ -525,7 +525,7 @@ docker compose up -d user-backend
 ```bash
 # วิธี 1: รีเซ็ตฐานข้อมูล (ข้อมูลจะหาย)
 docker compose down -v
-docker volume rm latta-csbot-unified_postgres_data 2>$null
+docker volume rm latta-csbot-unified_db_data 2>$null
 cp .env.example .env
 ./latta-csbot-database/utils/generate-keys.sh   # ต้องมี openssl (Git Bash/WSL)
 docker compose up -d
@@ -547,7 +547,7 @@ docker compose up -d --force-recreate rest storage
 **วิธีแก้ทั้ง Auth และ Realtime:** รีเซ็ตฐานข้อมูลแบบเต็ม (ข้อมูลจะหายทั้งหมด)
 ```bash
 docker compose down -v
-docker volume rm latta-csbot-unified_postgres_data 2>$null
+docker volume rm latta-csbot-unified_db_data 2>$null
 # ถ้าใช้ docker-compose.dev.yml: docker compose -f docker-compose.yml -f docker-compose.dev.yml down -v
 ./latta-csbot-database/reset.sh -y   # หรือรัน reset.sh แล้วกด y
 docker compose up -d
@@ -700,7 +700,9 @@ latta-csbot-database/
     │   ├── webhooks.sql                   # สร้าง webhook functions + pg_net
     │   ├── logs.sql                       # สร้าง _analytics schema
     │   ├── pooler.sql                     # สร้าง _supavisor schema
-    │   └── _supabase.sql                  # สร้าง _supabase database
+    │   ├── _supabase.sql                  # สร้าง _supabase database
+    │   └── migrations/                     # Flyway migrations สำหรับ RAG schema
+    │       └── V1__latta_rag_schema.sql   # Schema สำหรับ RAG (files, documents, document_chunks)
     ├── functions/
     │   ├── main/index.ts                  # Edge function router (JWT verify + dispatch)
     │   └── hello/index.ts                 # ตัวอย่าง edge function
@@ -709,6 +711,88 @@ latta-csbot-database/
     └── pooler/
         └── pooler.exs                     # Supavisor connection pooler config
 ```
+
+---
+
+## Database Initialization
+
+### ปัญหาของต้นแบบ supabase-docker
+
+ต้นแบบ `supabase-docker` มีปัญหาหลายอย่างที่ทำให้ startup ไม่สำเร็จ:
+
+| # | ปัญหา | ผลกระทบ |
+|---|--------|---------|
+| 1 | **Shell variable ไม่ทำงาน** | SQL files ใช้ `\set pguser \`echo "$POSTGRES_USER"\`` ซึ่งไม่ทำงานกับ Docker volume mounts |
+| 2 | **ขาด schemas จำเป็น** | `_realtime`, `_supabase` database ไม่ถูกสร้าง → Realtime, Analytics crash |
+| 3 | **ขาด tables สำหรับ Logflare** | `sources` และ `system_metrics` tables ไม่มี → Analytics crash |
+
+### วิธีแก้: ใช้ Flyway
+
+โปรเจกต์นี้ใช้ **Flyway** สำหรับ custom database migrations แทน Docker init scripts:
+
+```yaml
+# docker-compose.yml
+flyway:
+  image: flyway/flyway:10.4.1
+  depends_on:
+    supavisor:
+      condition: service_started
+  environment:
+    FLYWAY_URL: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+    FLYWAY_USER: supabase_admin
+    FLYWAY_PASSWORD: ${POSTGRES_PASSWORD}
+    FLYWAY_LOCATIONS: filesystem:/flyway/sql
+  volumes:
+    - ./latta-csbot-database/volumes/db/migrations:/flyway/sql:ro
+  command: migrate
+```
+
+**ข้อดีของ Flyway:**
+- ✅ รันหลังจาก Supabase services ทั้งหมดพร้อมแล้ว
+- ✅ ใช้ JDBC connection ที่มี password correctly  
+- ✅ มี version tracking และ migration history
+- ✅ รองรับ repeatable migrations
+
+### ลำดับการเริ่มต้น Services
+
+| # | Service | รอ |
+|---|---------|-----|
+| 1 | `vector` | - |
+| 2 | `db` | vector (healthy) |
+| 3 | `analytics` | db (healthy) |
+| 4 | `studio` | analytics (healthy) |
+| 5 | `kong` | analytics (healthy) |
+| 6 | `auth` | db + analytics (healthy) |
+| 7 | `rest` | db + analytics (healthy) |
+| 8 | `realtime` | db + analytics (healthy) |
+| 9 | `meta` | db + analytics (healthy) |
+| 10 | `storage` | db + rest + imgproxy |
+| 11 | `imgproxy` | - |
+| 12 | `functions` | analytics (healthy) |
+| 13 | `supavisor` | db + analytics (healthy) |
+| **14** | **`flyway`** | **supavisor (started)** |
+
+### RAG Schema (V1__latta_rag_schema.sql)
+
+Flyway รัน migration `V1__latta_rag_schema.sql` ซึ่งสร้าง:
+
+**Extensions:**
+- `uuid-ossp` - UUID generation
+- `vector` - Vector embeddings
+
+**Tables:**
+| Table | Description |
+|-------|-------------|
+| `public.files` | เก็บไฟล์อัพโหลด |
+| `public.documents` | เก็บ metadata ของเอกสาร |
+| `public.document_chunks` | เก็บ embeddings (vector) |
+
+**Storage Buckets:**
+- `file_rag` - ไฟล์เอกสาร
+- `image_rag` - ไฟล์ภาพ
+
+**Functions:**
+- `match_documents()` - Semantic search สำหรับ RAG
 
 ---
 

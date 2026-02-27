@@ -1,5 +1,6 @@
--- Create _supavisor schema for pooler
+\set pguser `echo "$POSTGRES_USER"`
+
 \c _supabase
-CREATE SCHEMA IF NOT EXISTS _supavisor;
-ALTER SCHEMA _supavisor OWNER TO supabase_admin;
+create schema if not exists _supavisor;
+alter schema _supavisor owner to :pguser;
 \c postgres
