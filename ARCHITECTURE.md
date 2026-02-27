@@ -1,8 +1,8 @@
-# Latta CS-BOT - Complete System Architecture
+# latte CS-BOT - Complete System Architecture
 
 ## ภาพรวมระบบทั้งหมด (Complete System Overview)
 
-ระบบ Latta CS-BOT แบ่งออกเป็น 4 โปรเจคหลักที่ทำงานร่วมกัน:
+ระบบ latte CS-BOT แบ่งออกเป็น 4 โปรเจคหลักที่ทำงานร่วมกัน:
 
 | โปรเจค | หน้าที่ | พอร์ตหลัก |
 |--------|---------|----------|
@@ -576,7 +576,7 @@ graph TB
             DB3[Redis]
         end
         
-        subgraph UserNet["latta_v1-network"]
+        subgraph UserNet["latte_v1-network"]
             direction TB
             U1[User Frontend]
             U2[User Backend]
@@ -717,7 +717,7 @@ graph TB
         
         subgraph Networks["Docker Networks"]
             N1[latte-database-network]
-            N2[latta_v1-network]
+            N2[latte_v1-network]
             N3[latte-admin-network]
             N4[latte-llm-network]
         end
@@ -856,9 +856,9 @@ graph LR
 | **LLM Layer** |
 | Ollama | latte-ollama | 11434 | `${OLLAMA_PORT}` | 11434 |
 | **User Services** |
-| User Frontend | latta_v1-user-frontend | 80 | `${USER_FRONTEND_PORT}` | 8080 |
-| User Backend | latta_v1-user-backend | 3001 | `${USER_BACKEND_PORT}` | 3001 |
-| AI Agent Server | latta_v1-ai-agent-server | 8765 | `${AI_AGENT_PORT}` | 8765 |
+| User Frontend | latte_v1-user-frontend | 80 | `${USER_FRONTEND_PORT}` | 8080 |
+| User Backend | latte_v1-user-backend | 3001 | `${USER_BACKEND_PORT}` | 3001 |
+| AI Agent Server | latte_v1-ai-agent-server | 8765 | `${AI_AGENT_PORT}` | 8765 |
 | **Admin Services** |
 | Admin Frontend | latte-admin-frontend | 81 | `${ADMIN_FRONTEND_PORT}` | 81 |
 | Admin Backend | latte-admin-backend | 3002 | `${ADMIN_PORT}` | 3002 |
@@ -876,7 +876,7 @@ graph LR
 
 ## Authors
 
-- Development Team - Latta CS-BOT Project
+- Development Team - latte CS-BOT Project
 
 ## WebSocket: Pros and Cons
 

@@ -13,7 +13,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}🚀 Starting Latta CSBot Admin Backend...${NC}"
+echo -e "${BLUE}🚀 Starting latte CSBot Admin Backend...${NC}"
 
 # Environment info
 echo -e "${YELLOW}📋 Environment: ${NODE_ENV:-production}${NC}"

@@ -1,4 +1,4 @@
-# LATTA-CSBOT
+# latte-CSBOT
 
 ระบบ AI Customer Service Chatbot สำหรับองค์กร ออกแบบแบบโมดูลาร์ รันทั้งหมดผ่าน Docker Compose ชุดเดียว
 ผู้ใช้สนทนาผ่านหน้าเว็บแชท ระบบจะดึงความรู้จากฐานข้อมูลเอกสาร (RAG) มาประกอบกับ LLM แล้วตอบกลับแบบ real-time
@@ -702,7 +702,7 @@ latte-csbot-database/
     │   ├── pooler.sql                     # สร้าง _supavisor schema
     │   ├── _supabase.sql                  # สร้าง _supabase database
     │   └── init-scripts/                   # SQL scripts สำหรับ RAG schema (database_lc.sql)
-    │       └── V1__latta_rag_schema.sql   # Schema สำหรับ RAG (files, documents, document_chunks)
+    │       └── V1__latte_rag_schema.sql   # Schema สำหรับ RAG (files, documents, document_chunks)
     ├── functions/
     │   ├── main/index.ts                  # Edge function router (JWT verify + dispatch)
     │   └── hello/index.ts                 # ตัวอย่าง edge function

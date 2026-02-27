@@ -8,7 +8,7 @@ User-facing chat application with real-time messaging, AI-powered responses (RAG
 
 ```mermaid
 flowchart TB
-    subgraph UserServices["latte-csbot-user-v1 (latta_v1-bot)"]
+    subgraph UserServices["latte-csbot-user-v1 (latte_v1-bot)"]
         subgraph Frontend["Frontend (Nginx)"]
             Nginx["Nginx Reverse Proxy<br/>Port: 80"]
             StaticFiles["HTML/CSS/JS<br/>Bootstrap 5"]
@@ -130,10 +130,10 @@ flowchart TB
 
 | Component | Technology | Port | Container | Purpose |
 |-----------|------------|------|-----------|---------|
-| Frontend | Nginx + HTML/CSS/JS + Bootstrap 5 | 80 | `latta_v1-user-frontend` | Reverse proxy + static files |
-| Backend | Node.js + Express 5 | 3001 | `latta_v1-user-backend` | API + WebSocket server |
-| AI Agent | Node.js + Express + BullMQ | 8765 | `latta_v1-ai-agent` | AI workflow orchestration |
-| Redis | Redis Stack | 6379/8001 | `latta_v1-redis` | Cache + Queue + Sessions |
+| Frontend | Nginx + HTML/CSS/JS + Bootstrap 5 | 80 | `latte_v1-user-frontend` | Reverse proxy + static files |
+| Backend | Node.js + Express 5 | 3001 | `latte_v1-user-backend` | API + WebSocket server |
+| AI Agent | Node.js + Express + BullMQ | 8765 | `latte_v1-ai-agent` | AI workflow orchestration |
+| Redis | Redis Stack | 6379/8001 | `latte_v1-redis` | Cache + Queue + Sessions |
 
 ## Module Structure
 
@@ -290,7 +290,7 @@ flowchart TB
 
 ## Network
 
-- **Network**: `latta_v1-network` (internal bridge)
+- **Network**: `latte_v1-network` (internal bridge)
 - **External**: Connects to `latte-database-network` (shared with latte-csbot-database)
 
 ## API Endpoints

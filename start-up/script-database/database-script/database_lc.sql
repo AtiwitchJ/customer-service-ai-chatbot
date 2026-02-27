@@ -1,5 +1,5 @@
 -- ===========================================
--- LATTA CSBOT - RAG Database Schema (Normalized V2)
+-- latte CSBOT - RAG Database Schema (Normalized V2)
 -- Consolidated & Latest Version
 -- ===========================================
 

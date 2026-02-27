@@ -1,5 +1,5 @@
 # ===========================================
-# LATTA CS-BOT Python AI Agent Dockerfile
+# latte CS-BOT Python AI Agent Dockerfile
 # ===========================================
 FROM python:3.11-slim
 
