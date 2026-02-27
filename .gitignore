@@ -18,8 +18,6 @@ build/
 .next/
 out/
 
-supabase
-
 # Environment variables
 .env
 .env.local
@@ -87,9 +85,6 @@ ollama_data/
 .ollama/
 
 # Supabase / Database
-.latte-csbot-database/volumes/db/data/
-latte-csbot-database/volumes/db/data/
-.latte-csbot-database/volumes/storage/
 
 # Redis data
 redis_data/
