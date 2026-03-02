@@ -79,6 +79,7 @@ latte-csbot-database/volumes/db/*
 latte-csbot-database/volumes/db/data/*
 !latte-csbot-database/volumes/db/*.sql
 !latte-csbot-database/volumes/db/init-scripts/
+!latte-csbot-database/volumes/db/init-scripts/*
 latte-csbot-database/volumes/db/init-scripts/*
 !latte-csbot-database/volumes/api/
 latte-csbot-database/volumes/api/*
