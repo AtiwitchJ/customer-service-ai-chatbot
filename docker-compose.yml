@@ -102,21 +102,21 @@ services:
     ports:
       - 5433:5432
     volumes:
-      - ./latte-csbot-database/volumes/db/realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql:Z
+      - ./latte-csbot-database/volumes/db/realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql
       # Must be superuser to create event trigger
-      - ./latte-csbot-database/volumes/db/webhooks.sql:/docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql:Z
+      - ./latte-csbot-database/volumes/db/webhooks.sql:/docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql
       # Must be superuser to alter reserved role
-      - ./latte-csbot-database/volumes/db/roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:Z
+      - ./latte-csbot-database/volumes/db/roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql
       # Initialize the database settings with JWT_SECRET and JWT_EXP
-      - ./latte-csbot-database/volumes/db/jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql:Z
+      - ./latte-csbot-database/volumes/db/jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql
       # PGDATA: use named volume to avoid corrupt data dir (e.g. missing pg_notify)
       - db_data:/var/lib/postgresql/data
       # Changes required for internal supabase data such as _analytics
-      - ./latte-csbot-database/volumes/db/_supabase.sql:/docker-entrypoint-initdb.d/migrations/97-_supabase.sql:Z
+      - ./latte-csbot-database/volumes/db/_supabase.sql:/docker-entrypoint-initdb.d/migrations/97-_supabase.sql
       # Changes required for Analytics support
-      - ./latte-csbot-database/volumes/db/logs.sql:/docker-entrypoint-initdb.d/migrations/99-logs.sql:Z
+      - ./latte-csbot-database/volumes/db/logs.sql:/docker-entrypoint-initdb.d/migrations/99-logs.sql
       # Changes required for Pooler support
-      - ./latte-csbot-database/volumes/db/pooler.sql:/docker-entrypoint-initdb.d/migrations/99-pooler.sql:Z
+      - ./latte-csbot-database/volumes/db/pooler.sql:/docker-entrypoint-initdb.d/migrations/99-pooler.sql
       # Use named volume to persist pgsodium decryption key between restarts
       - db-config:/etc/postgresql-custom
     healthcheck:
@@ -163,7 +163,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./latte-csbot-database/volumes/logs/vector.yml:/etc/vector/vector.yml:ro,z
-      - ${DOCKER_SOCKET_LOCATION}:/var/run/docker.sock:ro,z
+      - ${DOCKER_SOCKET_LOCATION}:/var/run/docker.sock:ro
     healthcheck:
       test:
         [
@@ -360,7 +360,7 @@ services:
     image: darthsim/imgproxy:v3.30.1
     restart: unless-stopped
     volumes:
-      - supabase-storage-data:/var/lib/storage:z
+      - supabase-storage-data:/var/lib/storage
     healthcheck:
       test:
         [
@@ -424,7 +424,7 @@ services:
       S3_PROTOCOL_ACCESS_KEY_ID: ${S3_PROTOCOL_ACCESS_KEY_ID}
       S3_PROTOCOL_ACCESS_KEY_SECRET: ${S3_PROTOCOL_ACCESS_KEY_SECRET}
     volumes:
-      - supabase-storage-data:/var/lib/storage:z
+      - supabase-storage-data:/var/lib/storage
     networks:
       - latte-network
 
@@ -453,7 +453,7 @@ services:
     image: supabase/edge-runtime:v1.70.3
     restart: unless-stopped
     volumes:
-      - ./latte-csbot-database/volumes/functions:/home/deno/functions:Z
+      - ./latte-csbot-database/volumes/functions:/home/deno/functions
       - deno-cache:/root/.cache/deno
     depends_on:
       analytics:
@@ -561,8 +561,8 @@ services:
       SNIPPETS_MANAGEMENT_FOLDER: /app/snippets
       EDGE_FUNCTIONS_MANAGEMENT_FOLDER: /app/edge-functions
     volumes:
-      - ./latte-csbot-database/volumes/snippets:/app/snippets:Z
-      - ./latte-csbot-database/volumes/functions:/app/edge-functions:Z
+      - ./latte-csbot-database/volumes/snippets:/app/snippets
+      - ./latte-csbot-database/volumes/functions:/app/edge-functions
     networks:
       - latte-network
 
