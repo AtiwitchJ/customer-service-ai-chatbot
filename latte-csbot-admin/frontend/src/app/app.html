@@ -1,6 +1,8 @@
 <div
   class="bg-gray-100 dark:bg-[#18181b] text-slate-900 dark:text-white font-display h-screen flex flex-col lg:flex-row overflow-hidden">
-  <app-sidebar class="order-2 lg:order-1 fixed bottom-0 w-full h-16 lg:static lg:h-screen lg:w-64 z-50"></app-sidebar>
+  @if (showSidebar()) {
+    <app-sidebar class="order-2 lg:order-1 fixed bottom-0 w-full h-16 lg:static lg:h-screen lg:w-64 z-50"></app-sidebar>
+  }
   <main class="order-1 lg:order-2 flex-1 relative overflow-hidden bg-gray-50 dark:bg-[#121212] pb-16 lg:pb-0">
     <router-outlet></router-outlet>
   </main>

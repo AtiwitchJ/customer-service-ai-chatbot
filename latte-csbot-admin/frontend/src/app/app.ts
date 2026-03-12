@@ -1,5 +1,6 @@
-import { Component, signal, OnInit } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { Component, signal, OnInit, inject } from '@angular/core';
+import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
 import { Sidebar } from './components/sidebar/sidebar';
 import { DataService } from './services/data';
 
@@ -11,11 +12,19 @@ import { DataService } from './services/data';
 })
 export class App implements OnInit {
   protected readonly title = signal('combined-admin-rag');
+  protected readonly showSidebar = signal(true);
+  private router = inject(Router);
 
-  constructor(private dataService: DataService) { }
+  constructor(private dataService: DataService) {
+    this.router.events.pipe(
+      filter((e): e is NavigationEnd => e instanceof NavigationEnd)
+    ).subscribe(() => {
+      this.showSidebar.set(!this.router.url.includes('/login'));
+    });
+    this.showSidebar.set(!this.router.url.includes('/login'));
+  }
 
   ngOnInit() {
     // ✅ TRIGGER GLOBAL PRELOAD
-    // this.dataService.loadAllData(); // Handled in DataService constructor
   }
 }

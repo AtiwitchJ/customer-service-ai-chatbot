@@ -33,15 +33,19 @@
         </button>
     </div>
 
-    <!-- User Profile (Desktop Only) -->
+    <!-- User Profile & Logout (Desktop Only) -->
     <div class="hidden lg:block p-4 border-t border-slate-100 dark:border-slate-800">
-        <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-500">A
+        <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-500">A</div>
+                <div>
+                    <div class="text-sm font-bold">Admin</div>
+                    <div class="text-xs text-slate-400">Online</div>
+                </div>
             </div>
-            <div>
-                <div class="text-sm font-bold">Admin</div>
-                <div class="text-xs text-slate-400">Online</div>
-            </div>
+            <button (click)="logout()" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 text-slate-500 hover:text-red-600" title="ออกจากระบบ">
+                <span class="material-symbols-outlined text-xl">logout</span>
+            </button>
         </div>
     </div>
 </nav>

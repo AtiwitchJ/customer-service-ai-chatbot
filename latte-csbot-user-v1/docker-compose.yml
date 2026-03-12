@@ -95,7 +95,7 @@ services:
       - CHAT_RATE_LIMIT_MAX=60
       # Session
       - REDIS_SESSION_TTL=${REDIS_SESSION_TTL}
-      # External Services
+      # User Auth (CardID+Email)
       - EXTERNAL_AUTH_API=${EXTERNAL_AUTH_API}
       - AUTH_BYPASS_MODE=${AUTH_BYPASS_MODE}
     restart: unless-stopped

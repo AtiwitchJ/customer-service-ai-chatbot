@@ -137,7 +137,7 @@ app.use('/chat/feedback', chatLimiter);
 // GET /config - Get API configuration (called on web open)
 // GET /config - ดึงค่า configuration ของ API (เรียกเมื่อเปิดเว็บ)
 app.get('/config', (req, res) => {
-  res.json({
+    res.json({
     API_BASE: process.env.API_BASE,
     WEBHOOK_URL: `${process.env.API_BASE}/webhook/send`,
     // Timeouts for frontend

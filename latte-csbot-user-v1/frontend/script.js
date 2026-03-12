@@ -288,7 +288,7 @@
             const res = await fetch(`${API_BASE}/config`);
             const config = await res.json();
             WEBHOOK_URL = `${API_BASE}/webhook/send`;
-            
+
             // โหลดค่า timeouts จาก server (ถ้ามี)
             if (config.AFK_TIMEOUT_MS) AFK_LIMIT = config.AFK_TIMEOUT_MS;
             if (config.AFK_WARNING_MS) AFK_WARNING_TIME = config.AFK_WARNING_MS;
@@ -306,7 +306,6 @@
 
     /**
      * Check user login status from server
-     * ตรวจสอบสถานะการเข้าสู่ระบบจากเซิร์ฟเวอร์
      */
     async function checkLoginStatus() {
         try {
@@ -318,16 +317,12 @@
             const data = await res.json();
 
             if (data.status === 'verified') {
-                // Authenticated - show chat interface
-                // ผู้ใช้เข้าสู่ระบบแล้ว - แสดงหน้าแชท
                 loginSection.classList.add('d-none');
                 await loadChatHistory();
                 restoreSavedSuggestions();
                 setChatInputState(true);
                 startAutoLogoutMonitoring();
             } else {
-                // User not logged in - show login form
-                // ผู้ใช้ยังไม่เข้าสู่ระบบ - แสดงฟอร์มเข้าสู่ระบบ
                 loginSection.classList.remove('d-none');
                 setChatInputState(false);
             }
@@ -471,18 +466,13 @@
     // =========================================================================
 
     /**
-     * Handle user login form submission
-     * จัดการการส่งฟอร์มเข้าสู่ระบบ
+     * Handle user login form submission (CardID + Email)
      */
     async function handleLogin(e) {
         if (e) e.preventDefault();
         const CardID = document.getElementById('loginCardID').value.trim();
         const Email = document.getElementById('loginEmail').value.trim();
 
-        // ---------------------------------------------------------------------
-        // Input Validation (A07:2021)
-        // ตรวจสอบ input
-        // ---------------------------------------------------------------------
         if (CardID.length === 0 || Email.length === 0) {
             showLoginError('กรุณากรอกข้อมูลให้ครบถ้วน');
             return;
@@ -498,26 +488,15 @@
             return;
         }
 
-        // Check for malicious input (A03:2021)
-        // ตรวจสอบ input ที่เป็นอันตราย
         if (detectMaliciousInput(CardID) || detectMaliciousInput(Email)) {
             showLoginError('ตรวจพบข้อมูลที่ไม่ปลอดภัย');
-            console.warn('[SECURITY] Malicious input detected in login form');
             return;
         }
 
-        // ---------------------------------------------------------------------
-        // UI Loading State
-        // แสดงสถานะกำลังโหลด
-        // ---------------------------------------------------------------------
         loginErrorMsg.classList.add('d-none');
         loginSubmitBtn.disabled = true;
         loginSubmitBtn.innerHTML = createLoadingSpinner() + ' กำลังตรวจสอบ...';
 
-        // ---------------------------------------------------------------------
-        // Send Login Request
-        // ส่งคำขอเข้าสู่ระบบ
-        // ---------------------------------------------------------------------
         try {
             const res = await fetch(`${API_BASE}/auth/login`, {
                 method: 'POST',
@@ -532,14 +511,10 @@
             const data = await res.json();
 
             if (res.ok && data.status === 'success') {
-                // Login successful - initialize chat
-                // เข้าสู่ระบบสำเร็จ - เริ่มต้นแชท
                 checkLoginStatus();
                 clearChatMessages();
                 showWelcomeMessage();
             } else {
-                // A09:2021 - Don't expose detailed error info
-                // ไม่แสดงรายละเอียด error เพื่อความปลอดภัย
                 showLoginError(data.message || 'การยืนยันตัวตนล้มเหลว');
             }
         } catch (error) {
@@ -1045,23 +1020,16 @@
 
     /**
      * Handle user logout
-     * จัดการการออกจากระบบ
      */
     function handleLogout() {
-        // Clear all timers
-        // ล้าง timer ทั้งหมด
         clearTimeout(afkTimer);
         clearTimeout(backgroundTimer);
         clearTimeout(afkWarningTimer);
         clearInterval(afkCountdownInterval);
 
-        // Clear session data
-        // ล้างข้อมูล session
         setCookie('sessionId', '', -1);
         localStorage.removeItem(STORAGE_KEY_SUGGESTIONS);
 
-        // Reload page
-        // โหลดหน้าใหม่
         window.location.reload();
     }
 
