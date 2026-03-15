@@ -1,32 +1,23 @@
-FROM node:20-alpine
-
-# Install wget for healthcheck
-RUN apk add --no-cache wget
-
+# Stage 1: Build
+FROM node:20-alpine AS builder
 WORKDIR /app
-
-# Copy root package.json for shared dependencies
 COPY package*.json ./
-
-# Install dependencies (only production)
-RUN npm ci --omit=dev --legacy-peer-deps
-
-# Copy backend code
+RUN npm ci --legacy-peer-deps
 COPY backend/ ./backend/
+RUN npm run build:backend
 
-# Copy shared config
+# Stage 2: Production
+FROM node:20-alpine
+RUN apk add --no-cache wget
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev --legacy-peer-deps
+COPY --from=builder /app/backend/dist ./backend/dist
 COPY .env* ./
-
 WORKDIR /app/backend
-
-# Default environment variables
 ENV NODE_ENV=production
 ENV PORT=3001
-
 EXPOSE 3001
-
-# Health check
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3001/config || exit 1
-
-CMD ["node", "server.js"]
+CMD ["node", "dist/server.js"]

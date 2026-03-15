@@ -21,10 +21,13 @@
     "ai:logs": "docker compose logs -f ollama redis mongodb",
     "webchat:start": "docker compose up -d frontend backend ai-agent",
     "webchat:logs": "docker compose logs -f frontend backend ai-agent",
-    "webchat:backend": "node latte-csbot_chat/backend/server.js",
-    "webchat:ai-agent": "node latte-csbot_ai-agent/ai-agent.js",
-    "dev:backend": "node --watch latte-csbot_chat/backend/server.js",
-    "dev:ai-agent": "node --watch latte-csbot_ai-agent/ai-agent.js",
+    "build:backend": "cd backend && tsc",
+    "build:ai-agent": "cd latte-csbot_ai-agent && tsc",
+    "build": "npm run build:backend && npm run build:ai-agent",
+    "webchat:backend": "node backend/dist/server.js",
+    "webchat:ai-agent": "node latte-csbot_ai-agent/dist/ai-agent.js",
+    "dev:backend": "cd backend && nodemon --exec ts-node server.ts",
+    "dev:ai-agent": "cd latte-csbot_ai-agent && nodemon --exec ts-node ai-agent.ts",
     "ollama:pull": "docker compose exec ollama ollama pull llama3.2",
     "ollama:models": "docker compose exec ollama ollama list",
     "docker:build": "docker compose build",
@@ -67,5 +70,15 @@
     "ws": "^8.18.3",
     "xss": "^1.0.15",
     "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^4.17.21",
+    "@types/morgan": "^1.9.9",
+    "@types/node": "^20.10.0",
+    "@types/ws": "^8.5.10",
+    "nodemon": "^3.0.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.0"
   }
 }

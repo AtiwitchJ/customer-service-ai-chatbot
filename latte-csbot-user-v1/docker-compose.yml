@@ -160,7 +160,7 @@ services:
     networks:
       - latte_v1-network
       - latte-database-network
-    command: ["node", "ai-agent.js"]
+    command: ["node", "dist/ai-agent.js"]
 
 # ==========================================
 # Networks

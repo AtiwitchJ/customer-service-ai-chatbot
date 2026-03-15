@@ -1,31 +1,21 @@
-FROM node:20-alpine
-
-# Install wget for healthcheck
-RUN apk add --no-cache wget
-
+# Stage 1: Build
+FROM node:20-alpine AS builder
 WORKDIR /app
-
-# Copy root package.json for shared dependencies
 COPY package*.json ./
-
-# Install dependencies (only production)
-RUN npm ci --omit=dev --legacy-peer-deps
-
-# Copy AI agent code
+RUN npm ci --legacy-peer-deps
 COPY latte-csbot_ai-agent/ ./latte-csbot_ai-agent/
+RUN npm run build:ai-agent
 
-# Copy shared config
+# Stage 2: Production
+FROM node:20-alpine
+RUN apk add --no-cache wget
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev --legacy-peer-deps
+COPY --from=builder /app/latte-csbot_ai-agent/dist ./latte-csbot_ai-agent/dist
 COPY .env* ./
-
 WORKDIR /app/latte-csbot_ai-agent
-
-# Default environment variables
 ENV NODE_ENV=production
 ENV PORT=8765
-
-# Expose port for the main workflow server
 EXPOSE 8765
-
-# The actual CMD is usually overridden in docker-compose.yml
-# Default: runs the all-in-one ai-agent.js
-CMD ["node", "ai-agent.js"]
+CMD ["node", "dist/ai-agent.js"]

@@ -905,7 +905,7 @@ services:
       retries: 3
     networks:
       - latte-network
-    command: ["node", "ai-agent.js"]
+    command: ["node", "dist/ai-agent.js"]
 
   user-frontend:
     build:
