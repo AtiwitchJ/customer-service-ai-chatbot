@@ -110,3 +110,5 @@ admin-dashboard-cache/
 admin-json-data/
 deno-cache/
 db-config/
+
+agent-*
